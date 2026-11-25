@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Farkle Online</title>
+  <meta name="description" content="Play Farkle online with a friend — fair, verifiable dice." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>🎲 Farkle</h1>
+    <div id="status" class="status hidden"></div>
+  </header>
+
+  <!-- LOBBY -->
+  <main id="lobby" class="screen">
+    <section class="card">
+      <label class="field">Your name
+        <input id="name" maxlength="16" placeholder="e.g. Jakob" autocomplete="nickname" />
+      </label>
+    </section>
+
+    <section class="card" id="join-card">
+      <h2>Join a friend</h2>
+      <p class="muted">Enter the room code your friend sent you (or just open their link).</p>
+      <div class="row">
+        <input id="join-code" maxlength="5" placeholder="CODE" class="code-input" autocomplete="off" />
+        <button id="join-btn" class="btn primary">Join game</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Start an online game</h2>
+      <p class="muted">You’ll get a link to send to your friend.</p>
+      <div class="row">
+        <select id="target">
+          <option value="10000">Play to 10,000</option>
+          <option value="5000">Play to 5,000</option>
+          <option value="2500">Play to 2,500 (quick)</option>
+        </select>
+        <button id="create-btn" class="btn primary">Create game</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Pass &amp; play</h2>
+      <p class="muted">Two players taking turns on this device.</p>
+      <div class="row">
+        <input id="local-p2" maxlength="16" placeholder="Player 2 name" />
+        <button id="local-btn" class="btn">Start</button>
+      </div>
+    </section>
+
+    <details class="card rules">
+      <summary>How to play &amp; how the dice stay fair</summary>
+      <div id="rules-body"></div>
+    </details>
+  </main>
+
+  <!-- GAME -->
+  <main id="game" class="screen hidden">
+    <section id="scoreboard" class="scoreboard"></section>
+
+    <section class="table">
+      <div class="turn-info">
+        <div id="turn-label" class="turn-label"></div>
+        <div class="turn-points">Turn: <strong id="turn-points">0</strong>
+          <span id="sel-points" class="sel-points"></span></div>
+      </div>
+
+      <div id="tray" class="tray"></div>
+      <div class="kept-wrap">
+        <span class="kept-label">Set aside</span>
+        <div id="kept" class="kept"></div>
+      </div>
+
+      <div id="banner" class="banner hidden"></div>
+
+      <div class="controls">
+        <button id="roll-btn" class="btn primary big">Roll</button>
+        <button id="bank-btn" class="btn big">Bank</button>
+      </div>
+      <div id="hint" class="hint"></div>
+      <div id="fair" class="fair"></div>
+    </section>
+
+    <section class="side">
+      <details class="card rules">
+        <summary>Scoring</summary>
+        <div id="rules-body-2"></div>
+      </details>
+      <div class="card log-card">
+        <h3>Game log</h3>
+        <ol id="log" class="log"></ol>
+      </div>
+      <button id="leave-btn" class="btn ghost">Leave game</button>
+    </section>
+  </main>
+
+  <!-- Waiting for friend -->
+  <div id="invite" class="overlay hidden">
+    <div class="modal">
+      <h2>Invite your friend</h2>
+      <p>Send them this link:</p>
+      <div class="row">
+        <input id="invite-link" readonly />
+        <button id="copy-btn" class="btn primary">Copy</button>
+      </div>
+      <p class="muted">Room code: <strong id="invite-code" class="code"></strong></p>
+      <p class="waiting"><span class="spinner"></span> Waiting for your friend to join…</p>
+      <button id="invite-cancel" class="btn ghost">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Game over -->
+  <div id="gameover" class="overlay hidden">
+    <div class="modal">
+      <h2 id="go-title"></h2>
+      <div id="go-scores"></div>
+      <button id="rematch-btn" class="btn primary big">Play again</button>
+      <button id="go-leave" class="btn ghost">Back to lobby</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
