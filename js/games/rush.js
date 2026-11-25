@@ -16,17 +16,26 @@ const rulesHTML = () => `
   <table>${Object.values(A).map((a) => `<tr><td>${a.icon} ${a.name} ×${a.count}</td><td>${esc(a.text)}</td></tr>`).join('')}</table>
   <table>${R.DISTRICT_IDS.map((d) => `<tr><td><span class="dsw" style="background:${D[d].color}"></span>${D[d].name} (${D[d].size})</td><td>rent ${D[d].rent.join(' / ')}</td></tr>`).join('')}</table>`;
 
+// Plain text cards: a colored name bar, the effect written out, and the bank value.
+function rentRows(d) {
+  return d.rent.map((r, k) => {
+    const full = k + 1 === d.size;
+    return `<div class="rr${full ? ' full' : ''}"><span>${full ? 'Full set' : `${k + 1} card${k ? 's' : ''}`}</span><b>${r}</b></div>`;
+  }).join('');
+}
+
 function cardHTML(id, extra = '') {
   const c = R.card(id);
-  if (c.type === 'money') return `<div class="rc money ${extra}" data-id="${id}"><span class="rv">${c.value}</span><span class="rl">money</span></div>`;
+  const wrap = (cls, head, body, foot, style = '') => `<div class="rc ${cls} ${extra}" data-id="${id}">
+    <div class="rc-head" ${style}>${head}</div><div class="rc-body">${body}</div><div class="rc-foot">${foot}</div></div>`;
+  if (c.type === 'money') return wrap('money', 'Money', `<div class="rc-big">${c.value}</div>`, `Bank value ${c.value}`);
   if (c.type === 'prop') {
     const d = D[c.district];
-    return `<div class="rc prop ${extra}" data-id="${id}"><span class="band" style="background:${d.color}">${esc(d.name)}</span>
-      <span class="rl">set of ${d.size}</span><span class="rent">rent ${d.rent.join('·')}</span><span class="val">${c.value}</span></div>`;
+    return wrap('prop', esc(d.name), `<div class="rc-sub">Rent · set of ${d.size}</div>${rentRows(d)}`, `Value ${c.value}`, `style="background:${d.color}"`);
   }
-  if (c.type === 'wild') return `<div class="rc prop wild ${extra}" data-id="${id}"><span class="band rainbow">Wild</span><span class="rl">any district</span><span class="val">0</span></div>`;
+  if (c.type === 'wild') return wrap('prop wild', 'Wild property', '<div class="rc-text">Joins any district you choose. Stays there once placed.</div>', 'Value 0');
   const a = A[c.action];
-  return `<div class="rc action ${extra}" data-id="${id}"><span class="ai">${a.icon}</span><span class="an">${esc(a.name)}</span><span class="val">${c.value}</span></div>`;
+  return wrap('action', `${a.icon} ${esc(a.name)}`, `<div class="rc-text">${esc(a.text)}</div>`, `Bank value ${c.value}`);
 }
 
 function chipHTML(id) {
@@ -36,16 +45,19 @@ function chipHTML(id) {
   return `<span class="chip money">${c.type === 'money' ? '' : `${A[c.action].icon} `}${c.value}</span>`;
 }
 
+// A player's table: one labeled tile per district they have cards in.
 function districtsHTML(p, compact) {
   const ds = R.DISTRICT_IDS.filter((d) => R.count(p, d));
-  if (!ds.length) return `<div class="nosets">${compact ? 'no properties' : 'No properties yet — place some from your hand.'}</div>`;
+  if (!ds.length) return `<div class="nosets">${compact ? 'No properties yet' : 'No properties yet — place some from your hand.'}</div>`;
   return ds.map((d) => {
     const n = R.count(p, d);
     const done = R.isComplete(p, d);
-    const pips = Array.from({ length: Math.max(n, D[d].size) }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('');
-    return compact
-      ? `<span class="dchip${done ? ' done' : ''}" style="--c:${D[d].color}" title="${esc(D[d].name)}"><b>${n}/${D[d].size}</b></span>`
-      : `<div class="dset${done ? ' done' : ''}" style="--c:${D[d].color}"><span class="dn">${esc(D[d].name)}${done ? ' ✓' : ''}</span><span class="dp">${pips}</span><span class="dr">rent ${R.rentFor(p, d)}</span></div>`;
+    const wilds = p.props[d].filter((id) => R.card(id).type === 'wild').length;
+    const pips = Array.from({ length: Math.max(n, D[d].size) }, (_, k) => `<i class="${k < n ? 'on' : ''}"></i>`).join('');
+    return `<div class="dset${done ? ' done' : ''}${compact ? ' small' : ''}" style="--c:${D[d].color}">
+      <span class="dn">${esc(D[d].name)}</span>
+      <span class="dl"><span class="dp">${pips}</span><b>${n}/${D[d].size}</b>${done ? '<em>✓ set</em>' : ''}</span>
+      <span class="dr">Rent ${R.rentFor(p, d)}${wilds ? ` · ${wilds} wild` : ''}</span></div>`;
   }).join('');
 }
 
@@ -270,9 +282,9 @@ export default {
       // opponents
       q('.opps').innerHTML = state.players.map((p, i) => (i === seat ? '' : `
         <div class="opp${i === state.current && state.phase !== 'over' ? ' active' : ''}${api.isAlive(p.pid) ? '' : ' away'}">
-          <div class="on"><span>${esc(p.name)}</span><span class="tag">${api.isAlive(p.pid) ? '' : 'away'}</span></div>
-          <div class="ostats"><span title="cards in hand">🂠 ${p.hand.length}</span><span title="bank">💰 ${R.bankTotal(p)}</span><span title="complete sets">⭐ ${R.completeSets(p)}/${R.WIN_SETS}</span></div>
-          <div class="odistricts">${districtsHTML(p, true)}</div>
+          <div class="on"><span class="onm">${esc(p.name)}${api.isAlive(p.pid) ? '' : ' (away)'}</span>
+            <span class="ostats">${p.hand.length} in hand · Bank ${R.bankTotal(p)} · <b>${R.completeSets(p)}/${R.WIN_SETS} sets</b></span></div>
+          <div class="districts">${districtsHTML(p, true)}</div>
         </div>`)).join('');
 
       const mine = seat >= 0;
@@ -285,9 +297,9 @@ export default {
 
       if (mine) {
         const p = me();
-        q('.mysets').textContent = `Your sets: ${R.completeSets(p)}/${R.WIN_SETS}`;
-        q('.mybank').textContent = `💰 ${R.bankTotal(p)} in bank`;
-        q('.districts').innerHTML = districtsHTML(p, false);
+        q('.mysets').textContent = `Your table · ${R.completeSets(p)}/${R.WIN_SETS} sets`;
+        q('.mybank').textContent = `Bank ${R.bankTotal(p)}`;
+        q('.mine .districts').innerHTML = districtsHTML(p, false);
         q('.hc').textContent = `(${p.hand.length})`;
         const tap = myTurn() && !waiting;
         const key = `${p.hand.join()}|${tap}`;
