@@ -52,6 +52,11 @@ function setStatus(text, ok) {
 
 function show(screen) {
   for (const id of ['home', 'lobby', 'play']) $(`#${id}`).classList.toggle('hidden', id !== screen);
+  document.body.classList.toggle('playing', screen === 'play');
+  // the connection pill lives in the game bar while playing (the header is hidden on phones)
+  const status = $('#status');
+  if (screen === 'play') $('.play-bar').insertBefore(status, $('#to-lobby'));
+  else $('.topbar').appendChild(status);
 }
 
 function keepTestParams(q) {

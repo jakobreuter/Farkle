@@ -80,6 +80,7 @@ export default {
     let animatingUntil = 0;
     let rollRequested = 0;
     let picked = null; // category selected on the scorecard, waiting for "Score"
+    let theirPick = null; // box the current (other) player is considering
     let uiTimer = null;
 
     const mySeat = () => api.mySeat();
@@ -112,13 +113,15 @@ export default {
       const cell = e.target.closest('td.open');
       if (!cell || !myTurn() || !rolled() || Date.now() < animatingUntil || rollRequested) return;
       picked = picked === cell.dataset.cat ? null : cell.dataset.cat;
+      api.gameEvent({ k: 'pick', cat: picked, roll: state.rollNo });
       render();
     });
 
     function renderCard() {
       const me = mySeat();
       const players = state.players;
-      const canPick = myTurn() && rolled() && Date.now() >= animatingUntil && !rollRequested;
+      const animating = Date.now() < animatingUntil;
+      const canPick = myTurn() && rolled() && !animating && !rollRequested;
       const head = `<tr><th></th>${players.map((p, i) => `<th class="${i === state.current && state.phase === 'play' ? 'cur' : ''}">${esc(p.name)}${i === me ? ' (you)' : ''}</th>`).join('')}</tr>`;
       const row = (k) => `<tr><td class="cat">${Y.LABELS[k]}</td>${players.map((p, i) => {
         const v = p.card[k];
@@ -126,6 +129,11 @@ export default {
         if (i === state.current && canPick && i === me) {
           const pts = Y.scoreFor(k, state.dice);
           return `<td class="open${picked === k ? ' picked' : ''}${pts ? '' : ' zero'}" data-cat="${k}">${pts}</td>`;
+        }
+        // the other player's options, so you can follow along
+        if (i === state.current && i !== me && state.phase === 'play' && rolled() && !animating) {
+          const pts = Y.scoreFor(k, state.dice);
+          return `<td class="preview${theirPick === k ? ' peek' : ''}${pts ? '' : ' zero'}">${pts}</td>`;
         }
         return '<td></td>';
       }).join('')}</tr>`;
@@ -178,7 +186,7 @@ export default {
 
       let hint = '';
       if (state.phase === 'over' || animating) hint = '';
-      else if (!myTurn()) hint = api.isAlive(cur.pid) ? `Waiting for ${cur.name}…` : `Waiting for ${cur.name} to come back…`;
+      else if (!myTurn()) hint = !api.isAlive(cur.pid) ? `Waiting for ${cur.name} to come back…` : rolled() ? `${cur.name}’s options are shown on the scorecard` : `Waiting for ${cur.name}…`;
       else if (!rolled()) hint = 'Roll the dice to start your turn.';
       else if (state.rollsLeft > 0) hint = picked ? 'Press Score, or keep rolling.' : 'Tap dice to hold them, roll again, or pick a box below.';
       else hint = picked ? 'Press Score to confirm.' : 'Pick a box on your scorecard below.';
@@ -192,7 +200,8 @@ export default {
         const old = state;
         state = next;
         if (old && next.rollNo !== old.rollNo) { rollRequested = 0; dice.forEach((d) => d.shake(false)); }
-        if (old && (old.current !== next.current || next.rollsLeft === 3)) picked = null;
+        if (old && (old.current !== next.current || next.rollsLeft === 3)) { picked = null; theirPick = null; }
+        if (old && next.rollNo !== old.rollNo) theirPick = null;
         if (old && next.lastRoll && next.rollNo === old.rollNo + 1) {
           animatingUntil = Date.now() + ROLL_MS;
           next.lastRoll.indices.forEach((di) => dice[di].roll(next.dice[di]));
@@ -207,6 +216,11 @@ export default {
         }
       },
       refresh: render,
+      onEvent(m, from) {
+        if (m?.k !== 'pick' || !state || from !== state.players[state.current]?.pid || m.roll !== state.rollNo) return;
+        theirPick = Y.CATS.includes(m.cat) ? m.cat : null;
+        render();
+      },
       destroy() { clearTimeout(uiTimer); el.remove(); },
     };
   },
