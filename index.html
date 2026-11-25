@@ -84,15 +84,13 @@
       </div>
 
       <div id="tray" class="tray"></div>
-      <div class="kept-wrap">
-        <span class="kept-label">Set aside</span>
-        <div id="kept" class="kept"></div>
-      </div>
 
       <div id="banner" class="banner hidden"></div>
+      <div id="turn-banner" class="turn-banner"></div>
 
       <div class="controls">
         <button id="roll-btn" class="btn primary big">Roll</button>
+        <button id="aside-btn" class="btn big">Set aside</button>
         <button id="bank-btn" class="btn big">Bank</button>
       </div>
       <div id="hint" class="hint"></div>
@@ -104,10 +102,10 @@
         <summary>Scoring</summary>
         <div id="rules-body-2"></div>
       </details>
-      <div class="card log-card">
-        <h3>Game log</h3>
+      <details class="card log-card" id="log-card">
+        <summary>Game log</summary>
         <ol id="log" class="log"></ol>
-      </div>
+      </details>
       <button id="leave-btn" class="btn ghost">Leave game</button>
     </section>
   </main>

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreDice, hasScore, newGame, applyAction, diceToRoll } from '../js/farkle.js';
+import { scoreDice, hasScore, newGame, applyAction, diceToRoll, canBank, belowEntry } from '../js/farkle.js';
 import { cryptoDice, deriveDice, randomHex, sha256Hex } from '../js/rng.js';
 
 test('scoring combinations', () => {
@@ -28,6 +28,8 @@ test('turn flow: keep, roll, bank, farkle, hot dice', () => {
   s = applyAction(s, { type: 'roll', values: [1, 5, 2, 3, 4, 6] });
   assert.equal(s.phase, 'select');
   s = applyAction(s, { type: 'toggle', index: 0 });
+  assert.equal(diceToRoll(s), 0); // must set aside first
+  s = applyAction(s, { type: 'setAside' });
   assert.equal(diceToRoll(s), 5);
   s = applyAction(s, { type: 'roll', values: [2, 3, 4, 6, 6] }); // farkle
   assert.equal(s.phase, 'farkle');
@@ -38,10 +40,13 @@ test('turn flow: keep, roll, bank, farkle, hot dice', () => {
   // hot dice
   s = applyAction(s, { type: 'roll', values: [1, 1, 1, 5, 5, 5] });
   for (let i = 0; i < 6; i++) s = applyAction(s, { type: 'toggle', index: i });
+  s = applyAction(s, { type: 'setAside' });
   assert.equal(diceToRoll(s), 6);
   s = applyAction(s, { type: 'roll', values: [1, 2, 3, 4, 6, 6] });
   assert.equal(s.turnPoints, 2500);
   s = applyAction(s, { type: 'toggle', index: 0 });
+  assert.ok(!canBank(s)); // grayed out until set aside
+  s = applyAction(s, { type: 'setAside' });
   s = applyAction(s, { type: 'bank' });
   assert.equal(s.players[1].score, 2600);
   // B reached target -> A gets a last turn
@@ -51,6 +56,55 @@ test('turn flow: keep, roll, bank, farkle, hot dice', () => {
   s = applyAction(s, { type: 'pass' });
   assert.equal(s.phase, 'over');
   assert.deepEqual(s.winners, [1]);
+});
+
+test('set aside without rolling, then roll or bank', () => {
+  let s = newGame(['A', 'B']);
+  s = applyAction(s, { type: 'roll', values: [1, 5, 2, 3, 4, 6] });
+  assert.equal(diceToRoll(s), 0); // nothing kept yet
+  assert.throws(() => applyAction(s, { type: 'setAside' }));
+  s = applyAction(s, { type: 'toggle', index: 0 });
+  s = applyAction(s, { type: 'setAside' });
+  assert.equal(s.turnPoints, 100);
+  assert.ok(s.dice[0].kept);
+  assert.equal(diceToRoll(s), 5);
+  assert.ok(!canBank(s)); // only 100 so far, first bank needs 500
+  // can still set aside more dice from the same roll
+  s = applyAction(s, { type: 'toggle', index: 1 });
+  s = applyAction(s, { type: 'setAside' });
+  assert.equal(s.turnPoints, 150);
+  assert.equal(diceToRoll(s), 4);
+  s = applyAction(s, { type: 'toggle', index: 2 }); // a 2 doesn't score
+  assert.equal(diceToRoll(s), 0);
+  assert.ok(!canBank(s));
+  s = applyAction(s, { type: 'toggle', index: 2 });
+  s = applyAction(s, { type: 'roll', values: [5, 2, 3, 4] });
+  assert.equal(s.asideThisRoll, false);
+  assert.equal(diceToRoll(s), 0);
+  s = applyAction(s, { type: 'toggle', index: 2 }); // the new 5
+  s = applyAction(s, { type: 'setAside' });
+  assert.equal(s.turnPoints, 200);
+  // first bank needs 500+
+  assert.ok(belowEntry(s));
+  assert.ok(!canBank(s));
+  assert.throws(() => applyAction(s, { type: 'bank' }));
+  s = applyAction(s, { type: 'roll', values: [1, 1, 1] });
+  s = applyAction(s, { type: 'toggle', index: 3 });
+  s = applyAction(s, { type: 'toggle', index: 4 });
+  s = applyAction(s, { type: 'toggle', index: 5 });
+  s = applyAction(s, { type: 'setAside' });
+  assert.ok(canBank(s));
+  s = applyAction(s, { type: 'bank' });
+  assert.equal(s.players[0].score, 1200);
+});
+
+test('after getting on the board, small banks are fine', () => {
+  let s = newGame(['A', 'B']);
+  s.players[0].score = 600;
+  s = applyAction(s, { type: 'roll', values: [5, 2, 3, 4, 6, 6] });
+  s = applyAction(s, { type: 'toggle', index: 0 });
+  s = applyAction(s, { type: 'setAside' });
+  assert.ok(canBank(s));
 });
 
 test('illegal actions are rejected', () => {

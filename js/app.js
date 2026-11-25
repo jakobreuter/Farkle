@@ -1,11 +1,11 @@
 import {
-  SCORING_RULES, newGame, applyAction, diceToRoll, canBank, selectionScore, freeIndices,
+  SCORING_RULES, ENTRY_MIN, newGame, applyAction, diceToRoll, canBank, canSetAside, belowEntry, selectionScore, freeIndices,
 } from './farkle.js';
 import { cryptoDice, randomHex, sha256Hex, deriveDice } from './rng.js';
 import { createHost, createGuest } from './net.js';
 
 const $ = (s) => document.querySelector(s);
-const ROLL_MS = 1100;
+const ROLL_MS = 1600;
 
 // ---------- app state ----------
 let mode = null; // 'local' | 'host' | 'guest'
@@ -38,7 +38,9 @@ function rulesHTML(full) {
   const how = `
     <ol>
       <li>Roll six dice. Tap the scoring dice you want to keep (you must keep at least one).</li>
+      <li>Tap <b>Set aside</b> to lock them in (they stay on the table, grayed out).</li>
       <li><b>Roll</b> the rest to try for more points, or <b>Bank</b> to add your turn total to your score.</li>
+      <li>Your first bank must be at least <b>${ENTRY_MIN}</b> points in one turn. After that, bank any amount.</li>
       <li>If a roll has no scoring dice, that’s a <b>Farkle</b> — you lose everything from this turn.</li>
       <li>Score with all six dice? <b>Hot dice</b> — roll all six again and keep building.</li>
       <li>Once someone reaches the target, everyone else gets one final turn. Highest score wins.</li>
@@ -83,9 +85,12 @@ function setDieFace(i, value, spin) {
   const sp = spins[i];
   const [bx, by] = FACE_ROT[value];
   if (spin) {
-    sp.x += 360 * (1 + Math.floor(Math.random() * 2));
-    sp.y += 360 * (1 + Math.floor(Math.random() * 2));
-    sp.z = Math.round(Math.random() * 40 - 20);
+    // Several full tumbles on every axis. Whole turns only, so each die lands
+    // perfectly flat and square. Purely cosmetic: the value is already decided.
+    const dir = () => (Math.random() < 0.5 ? -1 : 1);
+    sp.x += 360 * (3 + Math.floor(Math.random() * 3)) * dir();
+    sp.y += 360 * (2 + Math.floor(Math.random() * 3)) * dir();
+    sp.z += 360 * (1 + Math.floor(Math.random() * 2)) * dir();
   }
   sp.value = value;
   const cube = dieEls[i].querySelector('.cube');
@@ -99,16 +104,28 @@ function animateRoll(indices) {
   for (const i of indices) {
     const el = dieEls[i];
     el.classList.remove('no-anim', 'shaking', 'rolling');
-    el.style.setProperty('--dx', `${Math.round(Math.random() * 160 - 80)}px`);
+    el.style.setProperty('--dx', `${Math.round(Math.random() * 120 - 60)}px`);
+    el.style.setProperty('--tilt', `${Math.round(Math.random() * 50 - 25)}deg`);
+    el.style.setProperty('--delay', `${Math.round(Math.random() * 120)}ms`);
     void el.offsetWidth; // restart CSS animation
     el.classList.add('rolling');
     setDieFace(i, state.dice[i].value, true);
   }
   clearTimeout(uiTimer);
   uiTimer = setTimeout(() => {
-    for (const i of indices) dieEls[i].classList.remove('rolling');
+    for (const i of indices) {
+      const el = dieEls[i];
+      el.classList.remove('rolling');
+      // drop the extra whole turns (looks identical) so angles stay small
+      el.classList.add('no-anim');
+      const sp = spins[i];
+      sp.x %= 360; sp.y %= 360; sp.z %= 360;
+      setDieFace(i, sp.value, false);
+      void el.offsetWidth;
+      el.classList.remove('no-anim');
+    }
     render();
-  }, ROLL_MS + 20);
+  }, ROLL_MS + 160);
 }
 
 function shakeFree() {
@@ -159,15 +176,21 @@ function render() {
   const animating = Date.now() < animatingUntil;
 
   // scoreboard
-  $('#scoreboard').innerHTML = state.players.map((p, i) => {
-    const tag = mode === 'local' ? '' : i === me ? 'you' : 'friend';
-    const pct = Math.min(100, (p.score / state.target) * 100);
-    return `<div class="player ${i === state.current && state.phase !== 'over' ? 'active' : ''}">
-      <div class="pname"><span>${esc(p.name)}</span><span class="tag">${tag}</span></div>
-      <div class="pscore">${p.score.toLocaleString()}</div>
-      <div class="bar"><span style="width:${pct}%"></span></div>
-    </div>`;
-  }).join('');
+  // (update in place so the active-player highlight and score bars can animate)
+  const board = $('#scoreboard');
+  if (board.children.length !== state.players.length) {
+    board.innerHTML = state.players.map(() => `<div class="player">
+      <div class="pname"><span class="nm"></span><span class="tag"></span></div>
+      <div class="pscore"></div><div class="bar"><span></span></div></div>`).join('');
+  }
+  state.players.forEach((p, i) => {
+    const el = board.children[i];
+    el.classList.toggle('active', i === state.current && state.phase !== 'over');
+    el.querySelector('.nm').textContent = p.name;
+    el.querySelector('.tag').textContent = mode === 'local' ? '' : i === me ? 'you' : 'friend';
+    el.querySelector('.pscore').textContent = p.score.toLocaleString();
+    el.querySelector('.bar span').style.width = `${Math.min(100, (p.score / state.target) * 100)}%`;
+  });
 
   const cur = state.players[state.current];
   const final = state.finalRound ? ' — final round!' : '';
@@ -176,13 +199,12 @@ function render() {
     : (mode === 'local' ? `${cur.name}’s turn` : myTurn() ? 'Your turn' : `${cur.name}’s turn`) + final;
   $('#turn-points').textContent = state.turnPoints.toLocaleString();
 
-  // dice placement
+  // dice placement: all six stay in one row; set-aside dice are grayed out in place
   const tray = $('#tray');
-  const kept = $('#kept');
+  if (tray.children.length !== 6) dieEls.forEach((el) => tray.appendChild(el));
   state.dice.forEach((d, i) => {
     const el = dieEls[i];
-    const parent = d.kept ? kept : tray;
-    if (el.parentElement !== parent) parent.appendChild(el);
+    el.classList.toggle('kept', d.kept);
     if (!el.classList.contains('rolling') && spins[i].value !== d.value) setDieFace(i, d.value, false);
     const selectable = !animating && myTurn() && state.phase === 'select' && !d.kept && !pendingRoll;
     el.classList.toggle('clickable', selectable);
@@ -190,10 +212,6 @@ function render() {
     el.classList.toggle('dim', state.phase === 'start' && !el.classList.contains('shaking'));
     el.setAttribute('aria-disabled', String(!selectable));
   });
-  // keep DOM order stable by index
-  for (const parent of [tray, kept]) {
-    [...parent.children].sort((a, b) => a.dataset.i - b.dataset.i).forEach((c) => parent.appendChild(c));
-  }
 
   // selection score
   const selEl = $('#sel-points');
@@ -208,14 +226,15 @@ function render() {
   // controls
   const rollBtn = $('#roll-btn');
   const bankBtn = $('#bank-btn');
+  const asideBtn = $('#aside-btn');
   const n = diceToRoll(state);
   const busy = animating || !!pendingRoll || rollRequested;
   rollBtn.disabled = !myTurn() || !n || busy;
   bankBtn.disabled = !myTurn() || !canBank(state) || busy;
+  asideBtn.disabled = !myTurn() || !canSetAside(state) || busy;
   rollBtn.textContent = state.phase === 'start' ? 'Roll 6 dice'
     : n ? `Roll ${n} ${n === 1 ? 'die' : 'dice'}` : 'Roll';
-  const bankPts = state.turnPoints + (canBank(state) ? selectionScore(state) : 0);
-  bankBtn.textContent = canBank(state) ? `Bank ${bankPts.toLocaleString()}` : 'Bank';
+  bankBtn.textContent = canBank(state) ? `Bank ${state.turnPoints.toLocaleString()}` : 'Bank';
 
   // hint
   let hint = '';
@@ -224,14 +243,17 @@ function render() {
   else if (animating) hint = '';
   else if (state.phase === 'start') hint = 'Roll to start your turn.';
   else if (state.phase === 'select') {
-    hint = !state.selected.length ? 'Tap the scoring dice you want to keep.'
-      : selectionScore(state) ? 'Roll again or bank your points.' : 'Every kept die must score.';
+    hint = !state.selected.length
+      ? (!state.asideThisRoll ? 'Tap the scoring dice you want to keep.'
+        : belowEntry(state) ? `Keep rolling — you need ${(state.entryMin ?? ENTRY_MIN)} in one turn to get on the board.`
+          : 'Roll the remaining dice, or bank your points.')
+      : selectionScore(state) ? 'Tap Set aside to keep them.' : 'Every kept die must score.';
   }
   if (mode !== 'local' && !connected && state.phase !== 'over') hint = 'Connection lost — waiting to reconnect…';
   $('#hint').textContent = hint;
 
   const fair = $('#fair');
-  fair.textContent = animating ? '' : fairText;
+  fair.textContent = animating || !fairBad ? '' : fairText;
   fair.classList.toggle('bad', fairBad);
 
   // banners (shown after the dice land)
@@ -277,10 +299,32 @@ function receiveState(next) {
   rollRequested = false;
   for (const el of dieEls) el.classList.remove('shaking');
   if (prev && state.lastRoll && state.rollNo === prev.rollNo + 1) {
-    render(); // move dice to their trays first, then tumble the rolled ones
+    render(); // gray out set-aside dice first, then tumble the rolled ones
     animateRoll(state.lastRoll.indices);
   }
   render();
+  if (prev && prev.current !== state.current && state.phase !== 'over') {
+    // let "BANKED!" / "FARKLE!" finish before announcing the next player
+    showTurnBanner(prev.phase === 'farkle' ? 150 : 1150);
+  }
+}
+
+function showTurnBanner(delay) {
+  const tb = $('#turn-banner');
+  clearTimeout(showTurnBanner.t1);
+  clearTimeout(showTurnBanner.t2);
+  showTurnBanner.t1 = setTimeout(() => {
+    const name = state.players[state.current].name;
+    tb.textContent = mode !== 'local' && state.current === me ? 'Your turn' : `${name}’s turn`;
+    tb.classList.remove('show');
+    void tb.offsetWidth;
+    tb.classList.add('show');
+    const lbl = $('#turn-label');
+    lbl.classList.remove('swap');
+    void lbl.offsetWidth;
+    lbl.classList.add('swap');
+    showTurnBanner.t2 = setTimeout(() => tb.classList.remove('show'), 1700);
+  }, delay);
 }
 
 // host + local: commit a new authoritative state
@@ -377,6 +421,7 @@ function hostOnData(msg) {
     if (a.type === 'roll') return hostRoll(1);
     if (a.type === 'toggle') return tryApply({ type: 'toggle', index: Number(a.index) });
     if (a.type === 'bank') return tryApply({ type: 'bank' });
+    if (a.type === 'setAside') return tryApply({ type: 'setAside' });
   }
 }
 
@@ -441,6 +486,12 @@ $('#roll-btn').addEventListener('click', () => {
   setTimeout(() => { if (rollRequested) { rollRequested = false; for (const el of dieEls) el.classList.remove('shaking'); render(); } }, 10000);
 });
 
+$('#aside-btn').addEventListener('click', () => {
+  if (!myTurn() || !canSetAside(state) || Date.now() < animatingUntil || pendingRoll) return;
+  if (mode === 'guest') return net.send({ t: 'action', a: { type: 'setAside' } });
+  tryApply({ type: 'setAside' });
+});
+
 $('#bank-btn').addEventListener('click', () => {
   if (!myTurn() || !canBank(state)) return;
   if (mode === 'guest') return net.send({ t: 'action', a: { type: 'bank' } });
@@ -474,6 +525,7 @@ document.addEventListener('keydown', (e) => {
   if (!state || e.target.tagName === 'INPUT') return;
   if (e.key === ' ' || e.key === 'r') { e.preventDefault(); $('#roll-btn').click(); }
   if (e.key === 'b') $('#bank-btn').click();
+  if (e.key === 's') $('#aside-btn').click();
   if (/^[1-6]$/.test(e.key)) {
     const free = state.dice.map((d, i) => (d.kept ? -1 : i)).filter((i) => i >= 0);
     const idx = free[Number(e.key) - 1];

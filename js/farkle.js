@@ -1,6 +1,8 @@
 // Pure Farkle rules engine. No randomness lives here: dice values are passed in
 // with every "roll" action, so the same code runs identically for both players.
 
+export const ENTRY_MIN = 500; // first bank of the game must be at least this much
+
 export const SCORING_RULES = [
   ['Single 1', 100],
   ['Single 5', 50],
@@ -88,6 +90,8 @@ export function newGame(names, target = 10000, firstPlayer = 0) {
     turnPoints: 0,
     dice: [1, 2, 3, 4, 5, 6].map((v) => ({ value: v, kept: false })),
     selected: [],
+    asideThisRoll: false,
+    entryMin: ENTRY_MIN,
     phase: 'start', // start | select | farkle | over
     rollNo: 0,
     lastRoll: null,
@@ -111,17 +115,40 @@ export function selectionScore(state) {
 export function diceToRoll(state) {
   if (state.phase === 'start') return 6;
   if (state.phase !== 'select') return 0;
-  if (selectionScore(state) <= 0) return 0;
-  const left = freeIndices(state).length - state.selected.length;
+  // Selected dice must be set aside first, and at least one scoring die
+  // must have been set aside from this roll.
+  if (state.selected.length || !state.asideThisRoll) return 0;
+  const left = freeIndices(state).length;
   return left === 0 ? 6 : left; // hot dice
 }
 
-export function canBank(state) {
+/** "Set aside" moves the selected scoring dice off the table without rolling yet. */
+export function canSetAside(state) {
   return state.phase === 'select' && selectionScore(state) > 0;
+}
+
+/** True while the current player hasn't banked yet and this turn is still under the opening minimum. */
+export function belowEntry(state) {
+  const min = state.entryMin ?? ENTRY_MIN;
+  return state.players[state.current].score === 0 && state.turnPoints < min;
+}
+
+export function canBank(state) {
+  return state.phase === 'select' && !state.selected.length && !!state.asideThisRoll && !belowEntry(state);
 }
 
 function addLog(s, msg) {
   s.log = [...s.log, msg].slice(-40);
+}
+
+function keepSelected(s, name) {
+  if (!s.selected.length) return;
+  const pts = selectionScore(s);
+  s.turnPoints += pts;
+  for (const i of s.selected) s.dice[i].kept = true;
+  addLog(s, `${name} set aside ${s.selected.map((i) => s.dice[i].value).join(' ')} for ${pts}.`);
+  s.selected = [];
+  s.asideThisRoll = true;
 }
 
 function endTurn(s) {
@@ -133,6 +160,7 @@ function endTurn(s) {
   const next = (s.current + 1) % s.players.length;
   s.turnPoints = 0;
   s.selected = [];
+  s.asideThisRoll = false;
   s.dice = s.dice.map((d) => ({ ...d, kept: false }));
   if (s.finalRound && next === s.finalRound.trigger) {
     const top = Math.max(...s.players.map((pl) => pl.score));
@@ -147,7 +175,7 @@ function endTurn(s) {
 
 /**
  * Apply an action and return a NEW state, or throw if the action is illegal.
- * Actions: {type:'toggle', index} | {type:'roll', values} | {type:'bank'} | {type:'pass'}
+ * Actions: {type:'toggle', index} | {type:'setAside'} | {type:'roll', values} | {type:'bank'} | {type:'pass'}
  */
 export function applyAction(state, action) {
   const s = structuredClone(state);
@@ -170,17 +198,14 @@ export function applyAction(state, action) {
         throw new Error('Bad roll values');
       }
       if (s.phase === 'select') {
-        const pts = selectionScore(s);
-        s.turnPoints += pts;
-        for (const i of s.selected) s.dice[i].kept = true;
-        addLog(s, `${name} set aside ${s.selected.map((i) => s.dice[i].value).join(' ')} for ${pts}.`);
-        s.selected = [];
+        keepSelected(s, name);
         if (s.dice.every((d) => d.kept)) {
           s.dice = s.dice.map((d) => ({ ...d, kept: false }));
           s.event = 'hot';
           addLog(s, `🔥 Hot dice! ${name} rolls all six again.`);
         }
       }
+      s.asideThisRoll = false;
       const idx = freeIndices(s);
       idx.forEach((di, k) => (s.dice[di].value = values[k]));
       s.rollNo++;
@@ -195,10 +220,14 @@ export function applyAction(state, action) {
       }
       return s;
     }
+    case 'setAside': {
+      if (!canSetAside(s)) throw new Error('Nothing valid to set aside');
+      keepSelected(s, name);
+      return s;
+    }
     case 'bank': {
       if (!canBank(s)) throw new Error('Cannot bank now');
-      const pts = selectionScore(s);
-      s.turnPoints += pts;
+      keepSelected(s, name);
       s.players[s.current].score += s.turnPoints;
       addLog(s, `${name} banked ${s.turnPoints.toLocaleString()} → ${s.players[s.current].score.toLocaleString()}.`);
       s.event = 'bank';
