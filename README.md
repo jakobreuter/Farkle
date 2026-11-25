@@ -42,12 +42,14 @@ Farkle (no scoring dice) loses the turn's points. If you score with all six dice
 When someone reaches the target, every other player gets one last turn.
 
 ## How it works
-A plain static site (HTML/CSS/JS, no build step). Players connect directly browser-to-browser with WebRTC via
-[PeerJS](https://peerjs.com/) and its free public signaling server, so no game server is needed.
+A plain static site (HTML/CSS/JS, no build step). The two browsers exchange small JSON messages through
+public MQTT brokers over secure WebSockets (several at once, de-duplicated). That works on any network, including
+cellular, and recovers when a phone pauses the page in the background. No game server or account is needed.
+The relay can't affect the dice: rolls come from the commit–reveal scheme, which the guest verifies.
 
 - `js/farkle.js`: pure rules engine
 - `js/rng.js`: fair dice and commit–reveal
-- `js/net.js`: peer-to-peer connection
+- `js/net.js`: connection between the players (MQTT relay + heartbeat/reconnect)
 - `js/app.js`: UI, animation and game flow
 
 Run tests: `node --test tests/*.mjs`. Run locally: `python3 -m http.server`, then open http://localhost:8000.

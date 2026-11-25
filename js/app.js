@@ -366,7 +366,8 @@ function hostOnData(msg) {
       commitState(state);
     }
     if (pendingRoll) net.send({ t: 'commit', id: pendingRoll.id, commit: pendingRoll.commit });
-    toast(`${name} joined!`);
+    if (Date.now() - (hostOnData.lastHello || 0) > 15000) toast(`${name} joined!`);
+    hostOnData.lastHello = Date.now();
   } else if (msg.t === 'seed') {
     hostOnSeed(msg);
   } else if (msg.t === 'action' && state) {
@@ -499,17 +500,21 @@ function readName() {
   return n;
 }
 
+// carry testing overrides (?transport=, ?broker=) along
+function keepTestParams(q) {
+  const cur = new URLSearchParams(location.search);
+  for (const k of ['transport', 'broker']) if (cur.get(k)) q.set(k, cur.get(k));
+}
+
 function setUrl(params) {
   const q = new URLSearchParams(params);
-  const t = new URLSearchParams(location.search).get('transport');
-  if (t) q.set('transport', t);
+  keepTestParams(q);
   history.replaceState(null, '', `${location.pathname}?${q}`);
 }
 
 function shareLink() {
   const q = new URLSearchParams({ room, from: myName });
-  const t = new URLSearchParams(location.search).get('transport');
-  if (t) q.set('transport', t);
+  keepTestParams(q);
   return `${location.origin}${location.pathname}?${q}`;
 }
 
@@ -530,7 +535,10 @@ function startHost(code, restored) {
   }
   setStatus('Opening room…', false);
   net = createHost(code, {
-    onReady: () => setStatus(state ? 'Waiting for your friend to reconnect…' : 'Room open', !state),
+    onReady: () => {
+      if (!connected) setStatus(state ? 'Waiting for your friend…' : 'Room open', !state);
+      if (state) net.send({ t: 'state', state }); // resync after (re)connecting
+    },
     onConnect: () => { connected = true; setStatus('Friend connected', true); render(); },
     onDisconnect: () => { connected = false; setStatus('Friend disconnected', false); render(); },
     onData: hostOnData,
@@ -549,11 +557,19 @@ function startGuest(code) {
   show('game');
   $('#turn-label').textContent = 'Connecting…';
   setStatus('Connecting…', false);
+  const hello = () => net.send({ t: 'hello', name: myName });
+  // Keep knocking until the host answers with the game state.
+  clearInterval(startGuest.knock);
+  startGuest.knock = setInterval(() => { if (!state) hello(); }, 2000);
   net = createGuest(code, {
+    onReady: () => {
+      if (!connected) setStatus('Looking for the game…', false);
+      hello();
+    },
     onConnect: () => {
       connected = true;
       setStatus('Connected', true);
-      net.send({ t: 'hello', name: myName });
+      hello();
       render();
     },
     onDisconnect: () => { connected = false; setStatus('Reconnecting…', false); render(); },

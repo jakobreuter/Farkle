@@ -1,214 +1,139 @@
-// Peer-to-peer connection between two browsers. Uses PeerJS (WebRTC) so no game
-// server is needed — the site can be hosted on GitHub Pages.
-// `?transport=bc` switches to a BroadcastChannel (two tabs, same browser) for local testing.
+// Connection between the two players' browsers.
 //
-// Phones (especially iPhones) suspend pages when you switch apps, which can silently
-// kill connections. So we send a heartbeat every few seconds, treat a quiet link as
-// dead, and reconnect as soon as the page becomes visible again.
+// Messages go through public MQTT brokers over secure WebSockets (wss://, port 443-style
+// TLS). Unlike a direct browser-to-browser (WebRTC) link, this works on any network:
+// cellular, home Wi-Fi, strict routers. And when an iPhone pauses Safari in the
+// background, it simply reconnects. We connect to several brokers at once and
+// de-duplicate, so the game keeps working if one of them is down.
+//
+// Fairness doesn't depend on the relay: dice come from the commit–reveal scheme in rng.js,
+// which the guest verifies itself.
+//
+// Testing overrides: ?transport=bc (two tabs, same browser, no network) and
+// ?broker=wss://host/path (use one specific broker).
 
-const PREFIX = 'farkle-dice-room-';
-const PING_MS = 3000;
-const DEAD_MS = 10000;
+const BROKERS = [
+  'wss://broker.hivemq.com:8884/mqtt',
+  'wss://broker.emqx.io:8084/mqtt',
+  'wss://test.mosquitto.org:8081/mqtt',
+];
+const TOPIC_PREFIX = 'farkle-dice-game/v1/';
+const PING_MS = 2500;
+const DEAD_MS = 9000;
 
-function useBroadcast() {
-  return new URLSearchParams(location.search).get('transport') === 'bc';
-}
-
-// Wraps a data connection with heartbeat + dead-link detection.
-function watch(conn, h, onDead) {
-  let last = Date.now();
-  let dead = false;
-  const kill = () => {
-    if (dead) return;
-    dead = true;
-    clearInterval(iv);
-    try { conn.close(); } catch { /* ignore */ }
-    onDead();
-  };
-  const iv = setInterval(() => {
-    if (dead) return;
-    if (Date.now() - last > DEAD_MS) return kill();
-    try { conn.send({ t: '__ping' }); } catch { /* ignore */ }
-  }, PING_MS);
-  conn.on('data', (d) => {
-    last = Date.now();
-    if (!dead && d?.t !== '__ping') h.onData(d);
-  });
-  conn.on('close', kill);
-  conn.on('error', kill);
-  return { kill, isAlive: () => !dead && conn.open && Date.now() - last < DEAD_MS };
-}
-
-function onVisible(fn) {
-  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && fn());
-  addEventListener('pageshow', (e) => e.persisted && fn()); // iOS back/forward cache
-  addEventListener('online', fn);
+function rid(n = 12) {
+  const b = new Uint8Array(n);
+  crypto.getRandomValues(b);
+  return [...b].map((x) => x.toString(36).padStart(2, '0')).join('').slice(0, n);
 }
 
 /**
- * handlers: { onReady(), onConnect(), onData(msg), onDisconnect(), onError(text) }
+ * role: 'host' | 'guest'
+ * handlers: { onReady(), onConnect(), onDisconnect(), onData(msg), onError(text) }
+ *   onReady      – we're connected to the relay (fires again after every reconnect)
+ *   onConnect    – we're hearing from the other player
+ *   onDisconnect – the other player went quiet
  * returns { send(msg), isConnected() }
  */
-export function createHost(code, h) {
-  if (useBroadcast()) return bcEndpoint(code, 'host', h);
+function createEndpoint(code, role, h) {
+  const q = new URLSearchParams(location.search);
+  const sid = rid();
+  const topic = TOPIC_PREFIX + code;
+  const lastSeq = new Map(); // sender session -> last message number
+  let seq = 0;
+  let lastSeen = 0;
+  let alive = false;
 
-  let conn = null;
-  let link = null;
-  let peer;
-  let tries = 0;
-  const start = () => {
-    peer = new Peer(PREFIX + code);
-    peer.on('open', () => { tries = 0; h.onReady?.(); });
-    peer.on('connection', (c) => {
-      c.on('open', () => {
-        if (conn && conn !== c) link?.kill();
-        conn = c;
-        link = watch(c, h, () => {
-          if (conn === c) {
-            conn = null;
-            h.onDisconnect?.();
-          }
-        });
-        h.onConnect?.();
-      });
-    });
-    peer.on('disconnected', () => {
-      if (!peer.destroyed) setTimeout(() => !peer.destroyed && peer.disconnected && peer.reconnect(), 1000);
-    });
-    peer.on('error', (e) => {
-      // After a refresh/app switch the server may still hold our id for a few seconds.
-      if ((e.type === 'unavailable-id' || e.type === 'network' || e.type === 'server-error') && tries < 20) {
-        tries++;
-        peer.destroy();
-        h.onError?.('Reconnecting to the game server…');
-        setTimeout(start, 2500);
-      } else if (e.type !== 'peer-unavailable') {
-        h.onError?.(`Connection error: ${e.type || e.message}`);
-      }
-    });
-  };
-  start();
-  onVisible(() => {
-    if (peer.destroyed) return start();
-    if (peer.disconnected) peer.reconnect();
-  });
-  return {
-    send: (m) => { if (conn?.open) try { conn.send(m); } catch { /* ignore */ } },
-    isConnected: () => !!link?.isAlive(),
-  };
-}
-
-export function createGuest(code, h) {
-  if (useBroadcast()) return bcEndpoint(code, 'guest', h);
-
-  let conn = null;
-  let link = null;
-  let peer;
-  let retryTimer = null;
-  let connecting = false;
-
-  const connect = () => {
-    clearTimeout(retryTimer);
-    if (!peer || peer.destroyed) return newPeer();
-    if (peer.disconnected) {
-      peer.reconnect();
-      retryTimer = setTimeout(connect, 2000);
+  function receive(raw) {
+    let env;
+    try {
+      env = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw));
+    } catch {
       return;
     }
-    if (connecting) return;
-    connecting = true;
-    const c = peer.connect(PREFIX + code, { reliable: true });
-    const giveUp = setTimeout(() => {
-      // iOS sometimes never opens or errors; try again.
-      if (!c.open) {
-        connecting = false;
-        try { c.close(); } catch { /* ignore */ }
-        connect();
-      }
-    }, 8000);
-    c.on('open', () => {
-      clearTimeout(giveUp);
-      connecting = false;
-      if (link) link.kill();
-      conn = c;
-      link = watch(c, h, () => {
-        if (conn === c) {
-          conn = null;
-          h.onDisconnect?.();
-          retryTimer = setTimeout(connect, 1000);
-        }
-      });
+    if (!env || env.r === role || env.s === sid || typeof env.n !== 'number') return;
+    // Same message arrives once per broker; also drop anything older than what we've seen.
+    if (env.n <= (lastSeq.get(env.s) || 0)) return;
+    lastSeq.set(env.s, env.n);
+    lastSeen = Date.now();
+    if (!alive) {
+      alive = true;
       h.onConnect?.();
-    });
-    c.on('error', () => { clearTimeout(giveUp); connecting = false; });
-  };
-
-  const newPeer = () => {
-    connecting = false;
-    peer = new Peer();
-    peer.on('open', () => {
-      h.onReady?.();
-      connect();
-    });
-    peer.on('disconnected', () => {
-      if (!peer.destroyed) setTimeout(() => !peer.destroyed && peer.disconnected && peer.reconnect(), 1000);
-    });
-    peer.on('error', (e) => {
-      connecting = false;
-      if (e.type === 'peer-unavailable') {
-        h.onError?.('Waiting for the host… (is their game page open?)');
-        retryTimer = setTimeout(connect, 3000);
-      } else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') {
-        h.onError?.('Reconnecting…');
-        peer.destroy();
-        retryTimer = setTimeout(newPeer, 2500);
-      } else {
-        h.onError?.(`Connection error: ${e.type || e.message}`);
-      }
-    });
-  };
-  newPeer();
-
-  onVisible(() => {
-    if (!link?.isAlive()) {
-      link?.kill();
-      connect();
     }
-  });
-  return {
-    send: (m) => { if (conn?.open) try { conn.send(m); } catch { /* ignore */ } },
-    isConnected: () => !!link?.isAlive(),
-  };
-}
+    if (env.m?.t !== '__ping') h.onData(env.m);
+  }
 
-function bcEndpoint(code, role, h) {
-  const ch = new BroadcastChannel(PREFIX + code);
-  let connected = false;
-  ch.onmessage = (e) => {
-    const { from, msg, ctl } = e.data;
-    if (from === role) return;
-    if (ctl === 'hello' || ctl === 'hello-ack') {
-      if (ctl === 'hello') ch.postMessage({ from: role, ctl: 'hello-ack' });
-      if (!connected || ctl === 'hello') {
-        connected = true;
-        h.onConnect?.();
-      }
-      return;
+  let links; // [{ publish(payload, isPing), connected(), wake() }]
+  if (q.get('transport') === 'bc') {
+    const ch = new BroadcastChannel(topic);
+    ch.onmessage = (e) => receive(e.data);
+    links = [{ publish: (p) => ch.postMessage(p), connected: () => true, wake() {} }];
+    setTimeout(() => h.onReady?.(), 30);
+  } else {
+    if (!window.mqtt) {
+      h.onError?.('Could not load the connection library — check your internet and reload.');
+      return { send() {}, isConnected: () => false };
     }
-    if (ctl === 'bye') {
-      connected = false;
+    const urls = q.get('broker') ? q.get('broker').split(',') : BROKERS;
+    let everConnected = false;
+    links = urls.map((url) => {
+      const c = window.mqtt.connect(url, {
+        clientId: `farkle_${rid(10)}`,
+        clean: true,
+        keepalive: 20,
+        reconnectPeriod: 2000,
+        connectTimeout: 10000,
+      });
+      c.on('connect', () => {
+        c.subscribe(topic, { qos: 1 }, (err) => {
+          if (err) return;
+          everConnected = true;
+          h.onReady?.();
+        });
+      });
+      c.on('message', (_t, payload) => receive(payload));
+      c.on('error', () => {});
+      return {
+        publish: (p, isPing) => {
+          if (isPing && !c.connected) return; // don't queue heartbeats while offline
+          c.publish(topic, p, { qos: isPing ? 0 : 1 });
+        },
+        connected: () => c.connected,
+        wake: () => { if (!c.connected && !c.reconnecting) c.reconnect(); },
+      };
+    });
+    setTimeout(() => {
+      if (!everConnected) h.onError?.('Can’t reach the game relay — check your internet connection.');
+    }, 12000);
+  }
+
+  function send(m) {
+    const payload = JSON.stringify({ r: role, s: sid, n: ++seq, m });
+    const isPing = m?.t === '__ping';
+    for (const l of links) {
+      try { l.publish(payload, isPing); } catch { /* ignore */ }
+    }
+  }
+
+  setInterval(() => {
+    send({ t: '__ping' });
+    if (alive && Date.now() - lastSeen > DEAD_MS) {
+      alive = false;
       h.onDisconnect?.();
-      return;
     }
-    h.onData(msg);
+  }, PING_MS);
+
+  // Phones pause pages in the background; reconnect right away when we come back.
+  const wake = () => {
+    for (const l of links) l.wake();
+    send({ t: '__ping' });
   };
-  addEventListener('pagehide', () => ch.postMessage({ from: role, ctl: 'bye' }));
-  setTimeout(() => {
-    h.onReady?.();
-    ch.postMessage({ from: role, ctl: 'hello' });
-  }, 50);
-  return {
-    send: (m) => connected && ch.postMessage({ from: role, msg: m }),
-    isConnected: () => connected,
-  };
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && wake());
+  addEventListener('pageshow', (e) => e.persisted && wake());
+  addEventListener('online', wake);
+
+  return { send, isConnected: () => alive };
 }
+
+export const createHost = (code, h) => createEndpoint(code, 'host', h);
+export const createGuest = (code, h) => createEndpoint(code, 'guest', h);
