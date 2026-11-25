@@ -2,7 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f2a1d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Farkle" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Play Farkle with me 🎲" />
+  <meta property="og:description" content="Tap to join my game — animated dice, provably fair rolls, no sign-up." />
+  <meta property="og:image" content="https://jakobreuter.github.io/Farkle/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <title>Farkle Online</title>
   <meta name="description" content="Play Farkle online with a friend — fair, verifiable dice." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>" />
@@ -19,20 +29,22 @@
   <main id="lobby" class="screen">
     <section class="card">
       <label class="field">Your name
-        <input id="name" maxlength="16" placeholder="e.g. Jakob" autocomplete="nickname" />
+        <input id="name" maxlength="16" placeholder="e.g. Jakob" autocomplete="nickname" enterkeyhint="go" />
       </label>
     </section>
 
     <section class="card" id="join-card">
-      <h2>Join a friend</h2>
-      <p class="muted">Enter the room code your friend sent you (or just open their link).</p>
+      <h2 id="join-title">Join a friend</h2>
+      <p class="muted" id="join-sub">Enter the room code your friend sent you (or just open their link).</p>
       <div class="row">
-        <input id="join-code" maxlength="5" placeholder="CODE" class="code-input" autocomplete="off" />
+        <input id="join-code" maxlength="5" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="CODE" class="code-input" autocomplete="off" />
         <button id="join-btn" class="btn primary">Join game</button>
       </div>
     </section>
 
-    <section class="card">
+    <button id="own-game" class="btn ghost invited-only">or start your own game</button>
+
+    <section class="card" id="create-card">
       <h2>Start an online game</h2>
       <p class="muted">You’ll get a link to send to your friend.</p>
       <div class="row">
@@ -45,7 +57,7 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card" id="local-card">
       <h2>Pass &amp; play</h2>
       <p class="muted">Two players taking turns on this device.</p>
       <div class="row">
@@ -107,7 +119,7 @@
       <p>Send them this link:</p>
       <div class="row">
         <input id="invite-link" readonly />
-        <button id="copy-btn" class="btn primary">Copy</button>
+        <button id="copy-btn" class="btn primary">Copy link</button>
       </div>
       <p class="muted">Room code: <strong id="invite-code" class="code"></strong></p>
       <p class="waiting"><span class="spinner"></span> Waiting for your friend to join…</p>

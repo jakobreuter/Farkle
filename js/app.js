@@ -63,8 +63,9 @@ const FACE_ROT = { 1: [0, 0], 6: [0, 180], 3: [0, -90], 4: [0, 90], 2: [-90, 0],
 const dieEls = [];
 const spins = [];
 for (let i = 0; i < 6; i++) {
-  const b = document.createElement('button');
+  const b = document.createElement('div');
   b.className = 'die no-anim';
+  b.setAttribute('role', 'button');
   b.dataset.i = i;
   b.setAttribute('aria-label', 'die');
   const faces = [1, 2, 3, 4, 5, 6].map((f) => {
@@ -187,7 +188,7 @@ function render() {
     el.classList.toggle('clickable', selectable);
     el.classList.toggle('selected', state.selected.includes(i));
     el.classList.toggle('dim', state.phase === 'start' && !el.classList.contains('shaking'));
-    el.disabled = !selectable;
+    el.setAttribute('aria-disabled', String(!selectable));
   });
   // keep DOM order stable by index
   for (const parent of [tray, kept]) {
@@ -461,6 +462,7 @@ $('#rematch-btn').addEventListener('click', () => {
 
 function leave() {
   if (mode === 'host' && room) store.del(`farkle-host-${room}`);
+  if (mode === 'guest' && room) try { sessionStorage.removeItem(`farkle-joined-${room}`); } catch { /* ignore */ }
   location.href = location.pathname;
 }
 $('#leave-btn').addEventListener('click', () => { if (confirm('Leave this game?')) leave(); });
@@ -505,7 +507,7 @@ function setUrl(params) {
 }
 
 function shareLink() {
-  const q = new URLSearchParams({ room });
+  const q = new URLSearchParams({ room, from: myName });
   const t = new URLSearchParams(location.search).get('transport');
   if (t) q.set('transport', t);
   return `${location.origin}${location.pathname}?${q}`;
@@ -538,6 +540,8 @@ function startHost(code, restored) {
 }
 
 function startGuest(code) {
+  try { sessionStorage.setItem(`farkle-joined-${code}`, myName); } catch { /* ignore */ }
+  document.body.classList.remove('invited');
   mode = 'guest';
   me = 1;
   room = code;
@@ -574,6 +578,9 @@ $('#join-btn').addEventListener('click', () => {
   startGuest(code);
 });
 $('#join-code').addEventListener('keydown', (e) => e.key === 'Enter' && $('#join-btn').click());
+$('#name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.body.classList.contains('invited')) $('#join-btn').click();
+});
 
 $('#local-btn').addEventListener('click', () => {
   const n = readName();
@@ -585,18 +592,33 @@ $('#local-btn').addEventListener('click', () => {
   commitState(newGame([n, p2], Number($('#target').value) || 10000, 0));
 });
 
+const canShare = !!navigator.share && matchMedia('(pointer: coarse)').matches;
+if (canShare) $('#copy-btn').textContent = 'Share link';
 $('#copy-btn').addEventListener('click', async () => {
   const link = $('#invite-link').value;
-  try {
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-      await navigator.share({ title: 'Play Farkle with me', url: link });
-    } else {
-      await navigator.clipboard.writeText(link);
-      toast('Link copied!');
+  if (canShare) {
+    try {
+      await navigator.share({ title: 'Farkle', text: `${myName} invited you to play Farkle 🎲`, url: link });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user closed the share sheet
     }
-  } catch {
-    $('#invite-link').select();
   }
+  try {
+    await navigator.clipboard.writeText(link);
+    toast('Link copied — paste it into a message to your friend.');
+  } catch {
+    const inp = $('#invite-link');
+    inp.focus();
+    inp.setSelectionRange(0, inp.value.length);
+    toast('Press and hold to copy the link.');
+  }
+});
+$('#invite-link').addEventListener('focus', (e) => e.target.setSelectionRange(0, e.target.value.length));
+$('#own-game').addEventListener('click', () => {
+  document.body.classList.remove('invited');
+  setUrl({});
+  $('#create-card').scrollIntoView({ behavior: 'smooth' });
 });
 
 // ---------- boot ----------
@@ -612,9 +634,17 @@ $('#copy-btn').addEventListener('click', async () => {
     }
   }
   if (code) {
+    let rejoinName = null;
+    try { rejoinName = sessionStorage.getItem(`farkle-joined-${code}`); } catch { /* ignore */ }
+    if (rejoinName) {
+      myName = rejoinName;
+      return startGuest(code);
+    }
+    const from = (q.get('from') || '').slice(0, 16);
+    document.body.classList.add('invited');
     $('#join-code').value = code;
-    $('#join-card').scrollIntoView();
-    if ($('#name').value) $('#join-btn').focus();
-    else $('#name').focus();
+    $('#join-title').textContent = from ? `${from} invited you to play!` : 'You’re invited to play!';
+    $('#join-sub').textContent = 'Enter your name above, then tap Join game.';
+    if (!$('#name').value) $('#name').focus();
   }
 })();

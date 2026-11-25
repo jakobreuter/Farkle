@@ -11,6 +11,14 @@ Play Farkle in the browser with a friend, with animated 3D dice and provably fai
 
 You can also choose **Pass & play** to play on one device.
 
+### On iPhone / phones
+- The layout is built for phones: the whole table, all six dice and the Roll/Bank buttons fit on one screen.
+- On a phone, **Share link** opens the iOS share sheet so you can send the invite by iMessage, WhatsApp, etc.
+  The link shows a preview card, and your friend lands on a simple "*Jakob invited you to play!*" screen.
+- If either player switches apps (for example to answer a text) and comes back, the game reconnects automatically,
+  and a reload rejoins the same game.
+- Optional: in Safari, tap Share → **Add to Home Screen** for an app-like icon.
+
 ## Fair dice
 - Every die is uniform on 1–6. There is no weighting, no streak or "catch-up" logic, and both players are handled the same way.
 - **Online:** each roll is created by *both* players together using commit–reveal.

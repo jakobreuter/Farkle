@@ -18,8 +18,14 @@
 
 * { box-sizing: border-box; }
 
+html { -webkit-text-size-adjust: 100%; }
+
 body {
   margin: 0;
+  overflow-x: hidden;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   min-height: 100vh;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: radial-gradient(circle at 50% 0%, #1b4a33, var(--bg) 70%);
@@ -69,6 +75,7 @@ body {
 
 input, select {
   font: inherit;
+  font-size: 16px; /* prevents iOS zoom-on-focus */
   padding: 10px 12px;
   border-radius: 10px;
   border: 1.5px solid #d8d2c2;
@@ -117,6 +124,8 @@ input:focus, select:focus { outline: 2px solid var(--accent); border-color: tran
   #game { grid-template-columns: 1fr; grid-template-areas: "score" "table" "side"; }
   :root { --size: 52px; }
 }
+
+
 
 .player {
   background: rgba(255,255,255,.08);
@@ -189,9 +198,12 @@ input:focus, select:focus { outline: 2px solid var(--accent); border-color: tran
   cursor: default;
   position: relative;
   transition: transform .2s;
+  -webkit-user-select: none;
+  user-select: none;
+  flex: none;
 }
 .die.clickable { cursor: pointer; }
-.die.clickable:hover .cube-wrap { transform: translateY(-4px); }
+@media (hover: hover) { .die.clickable:hover .cube-wrap { transform: translateY(-4px); } }
 .die.selected .cube-wrap { transform: translateY(-10px); }
 .die.selected::after {
   content: "";
@@ -219,6 +231,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); border-color: tran
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
   padding: 14%;
+  -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
 .face .pip { width: 72%; height: 72%; margin: auto; border-radius: 50%; background: var(--pip); box-shadow: inset 0 2px 2px rgba(0,0,0,.5); visibility: hidden; }
@@ -314,4 +327,34 @@ input:focus, select:focus { outline: 2px solid var(--accent); border-color: tran
 @media (prefers-reduced-motion: reduce) {
   .die .cube { transition-duration: .2s; }
   .die.rolling .tumble, .die.shaking .tumble { animation: none; }
+}
+
+/* invited friend sees just "enter name + join" */
+.invited-only { display: none; }
+body.invited .invited-only { display: block; }
+body.invited #create-card, body.invited #local-card { display: none; }
+body.invited #join-card { border: 3px solid var(--accent); }
+
+@media (max-width: 600px) {
+  :root { --size: 44px; }
+  .topbar { padding: 8px 16px; }
+  .topbar h1 { font-size: 1.2rem; }
+  .status { font-size: .75rem; padding: 4px 10px; }
+  .screen { padding: 0 10px 24px; }
+  #game { gap: 10px; }
+  .scoreboard { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+  .player { padding: 8px 12px; border-radius: 12px; }
+  .player .pscore { font-size: 1.5rem; margin: 0 0 4px; }
+  .player .pname { font-size: .9rem; }
+  .table { border-width: 8px; border-radius: 18px; padding: 12px 10px; min-height: 0; gap: 10px; }
+  .turn-label { font-size: 1rem; }
+  .turn-points strong { font-size: 1.2rem; }
+  .tray { min-height: 120px; gap: 9px; padding: 16px 0 12px; }
+  .kept-wrap { padding: 6px 10px; gap: 8px; }
+  .kept { gap: 6px; }
+  .kept-label { font-size: .7rem; }
+  .controls { gap: 10px; flex-wrap: nowrap; }
+  .btn.big { min-width: 0; flex: 1; padding: 14px 10px; }
+  .hint { font-size: .88rem; }
+  .log-card { max-height: 260px; }
 }
