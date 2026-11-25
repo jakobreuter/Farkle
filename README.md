@@ -2,7 +2,7 @@
 
 Play Farkle in the browser with a friend, with animated 3D dice and provably fair rolls.
 
-**Play:** https://jakobreuter.github.io/farkle/ (after GitHub Pages is enabled, see below)
+**Play:** https://jakobreuter.github.io/Farkle/ (after GitHub Pages is enabled, see below)
 
 ## How to play with a friend
 1. Open the site, enter your name and click **Create game**.
@@ -45,5 +45,5 @@ A plain static site (HTML/CSS/JS, no build step). Players connect directly brows
 Run tests: `node --test tests/*.mjs`. Run locally: `python3 -m http.server`, then open http://localhost:8000.
 
 ## Enabling GitHub Pages
-Repository **Settings → Pages → Build and deployment → Source: Deploy from a branch**, pick `main` and `/ (root)`, then Save.
-The site goes live at `https://<user>.github.io/farkle/` within a minute or two.
+Repository **Settings → Pages → Build and deployment → Source: Deploy from a branch**, pick `main` (or this branch) and `/ (root)`, then Save. Pages on a private repo needs GitHub Pro; otherwise make the repo public.
+The site goes live at `https://<user>.github.io/Farkle/` within a minute or two.
