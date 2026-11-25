@@ -1,30 +1,16 @@
-// Fair dice. Every die is uniform on 1..6 — no weighting, no streak logic,
+// Fair randomness. Every outcome is exactly uniform: no weighting, no streak logic,
 // no "comeback" help for anyone.
 //
-// Offline: the browser's cryptographic RNG (crypto.getRandomValues).
-// Online: commit–reveal between both players, so NEITHER player can bias a roll,
-// even by modifying their own copy of the code:
+// Online, each random event (a dice roll, a card flip, a word pick) is made with
+// commit–reveal between the host and one other player, so neither can bias it:
 //   1. host picks a secret random seed H and sends only SHA-256(H) (the "commitment")
-//   2. guest replies with its own random seed G
-//   3. host reveals H; dice = SHA-256(H : G : rollId : counter) bytes
-//   4. guest checks SHA-256(H) matches the commitment and recomputes the dice.
-// The host can't choose H after seeing G, and the guest doesn't know H when picking G.
-
-// Bytes >= 252 are rejected so that byte % 6 is exactly uniform (252 = 42 * 6).
-const LIMIT = 252;
-
-export function cryptoDice(n) {
-  const out = [];
-  const buf = new Uint8Array(16);
-  while (out.length < n) {
-    crypto.getRandomValues(buf);
-    for (const b of buf) {
-      if (b < LIMIT) out.push((b % 6) + 1);
-      if (out.length === n) break;
-    }
-  }
-  return out;
-}
+//   2. the other player replies with their own random seed G
+//   3. host reveals H; results come from SHA-256(H : G : id : counter)
+//   4. that player's browser checks SHA-256(H) matches and recomputes the results.
+// If nobody else is around to contribute (e.g. they switched apps), the host uses its
+// own cryptographic RNG so the game never stalls.
+//
+// Integers in [0, r) are drawn with rejection sampling so every value is equally likely.
 
 export function randomHex(bytes = 32) {
   const b = new Uint8Array(bytes);
@@ -42,14 +28,51 @@ export async function sha256Hex(text) {
   return [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
 }
 
-export async function deriveDice(hostSeed, guestSeed, rollId, n) {
-  const out = [];
-  for (let counter = 0; out.length < n; counter++) {
-    const h = await sha256Bytes(`${hostSeed}:${guestSeed}:${rollId}:${counter}`);
-    for (const b of h) {
-      if (b < LIMIT) out.push((b % 6) + 1);
-      if (out.length === n) break;
+const TWO32 = 2 ** 32;
+
+/** Turn a stream of 32-bit words into uniform integers, one per range. */
+function sample(nextWord, ranges) {
+  return ranges.map((r) => {
+    if (!(Number.isInteger(r) && r >= 1)) throw new Error('bad range');
+    const limit = Math.floor(TWO32 / r) * r;
+    for (;;) {
+      const u = nextWord();
+      if (u < limit) return u % r;
     }
+  });
+}
+
+/** Uniform integers from the browser's cryptographic RNG. */
+export function cryptoInts(ranges) {
+  const buf = new Uint32Array(64);
+  let i = buf.length;
+  return sample(() => {
+    if (i === buf.length) { crypto.getRandomValues(buf); i = 0; }
+    return buf[i++];
+  }, ranges);
+}
+
+/** Uniform integers derived from both players' seeds (deterministic, verifiable). */
+export async function deriveInts(hostSeed, guestSeed, id, ranges) {
+  // Pre-generate enough hash output; rejection is rare (< 1 in 2^31 per draw for small ranges).
+  const words = [];
+  let counter = 0;
+  const need = ranges.length + 8;
+  while (words.length < need) {
+    const h = await sha256Bytes(`${hostSeed}:${guestSeed}:${id}:${counter++}`);
+    const dv = new DataView(h.buffer);
+    for (let k = 0; k < 8; k++) words.push(dv.getUint32(k * 4));
   }
-  return out;
+  let i = 0;
+  return sample(() => {
+    // 8 spare words: running out would need 8 consecutive rejections (odds < 1e-60)
+    if (i >= words.length) throw new Error('randomness exhausted');
+    return words[i++];
+  }, ranges);
+}
+
+// Dice helpers (1..6)
+export const cryptoDice = (n) => cryptoInts(Array(n).fill(6)).map((v) => v + 1);
+export async function deriveDice(hostSeed, guestSeed, id, n) {
+  return (await deriveInts(hostSeed, guestSeed, id, Array(n).fill(6))).map((v) => v + 1);
 }

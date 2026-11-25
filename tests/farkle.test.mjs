@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreDice, hasScore, newGame, applyAction, diceToRoll, canBank, belowEntry } from '../js/farkle.js';
-import { cryptoDice, deriveDice, randomHex, sha256Hex } from '../js/rng.js';
+import { scoreDice, hasScore, newGame, applyAction, diceToRoll, canBank, belowEntry } from '../js/engines/farkle.js';
+import { cryptoDice, deriveDice, randomHex, sha256Hex, cryptoInts, deriveInts } from '../js/rng.js';
 
 test('scoring combinations', () => {
   const cases = [

@@ -2,31 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Game Night</title>
+  <meta name="description" content="Play Farkle, Yacht, Draw and more with friends online — fair dice, no sign-up." />
   <meta name="theme-color" content="#0f2a1d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Farkle" />
+  <meta name="apple-mobile-web-app-title" content="Game Night" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Play Farkle with me 🎲" />
-  <meta property="og:description" content="Tap to join my game — animated dice, provably fair rolls, no sign-up." />
+  <meta property="og:title" content="Join my game night 🎲" />
+  <meta property="og:description" content="Tap to join — Farkle, Yacht, Draw and more. No sign-up." />
   <meta property="og:image" content="https://jakobreuter.github.io/Farkle/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <title>Farkle Online</title>
-  <meta name="description" content="Play Farkle online with a friend — fair, verifiable dice." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 </head>
 <body>
   <header class="topbar">
-    <h1>🎲 Farkle</h1>
+    <h1>🎲 Game Night</h1>
     <div id="status" class="status hidden"></div>
   </header>
 
-  <!-- LOBBY -->
-  <main id="lobby" class="screen">
+  <!-- HOME -->
+  <main id="home" class="screen">
     <section class="card">
       <label class="field">Your name
         <input id="name" maxlength="16" placeholder="e.g. Jakob" autocomplete="nickname" enterkeyhint="go" />
@@ -34,104 +34,81 @@
     </section>
 
     <section class="card" id="join-card">
-      <h2 id="join-title">Join a friend</h2>
+      <h2 id="join-title">Join a session</h2>
       <p class="muted" id="join-sub">Enter the room code your friend sent you (or just open their link).</p>
       <div class="row">
-        <input id="join-code" maxlength="5" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="CODE" class="code-input" autocomplete="off" />
-        <button id="join-btn" class="btn primary">Join game</button>
+        <input id="join-code" maxlength="5" placeholder="CODE" class="code-input" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" />
+        <button id="join-btn" class="btn primary">Join</button>
       </div>
     </section>
 
-    <button id="own-game" class="btn ghost invited-only">or start your own game</button>
+    <button id="own-game" class="btn ghost invited-only">or start your own session</button>
 
     <section class="card" id="create-card">
-      <h2>Start an online game</h2>
-      <p class="muted">You’ll get a link to send to your friend.</p>
-      <div class="row">
-        <select id="target">
-          <option value="10000">Play to 10,000</option>
-          <option value="5000">Play to 5,000</option>
-          <option value="2500">Play to 2,500 (quick)</option>
-        </select>
-        <button id="create-btn" class="btn primary">Create game</button>
-      </div>
+      <h2>Start a session</h2>
+      <p class="muted">Get a link for your friends. Once everyone’s in, you pick what to play — Farkle, Yacht, Draw, Lucky Streak — and switch games any time.</p>
+      <button id="create-btn" class="btn primary big">Create session</button>
     </section>
-
-    <section class="card" id="local-card">
-      <h2>Pass &amp; play</h2>
-      <p class="muted">Two players taking turns on this device.</p>
-      <div class="row">
-        <input id="local-p2" maxlength="16" placeholder="Player 2 name" />
-        <button id="local-btn" class="btn">Start</button>
-      </div>
-    </section>
-
-    <details class="card rules">
-      <summary>How to play &amp; how the dice stay fair</summary>
-      <div id="rules-body"></div>
-    </details>
   </main>
 
-  <!-- GAME -->
-  <main id="game" class="screen hidden">
-    <section id="scoreboard" class="scoreboard"></section>
-
-    <section class="table">
-      <div class="turn-info">
-        <div id="turn-label" class="turn-label"></div>
-        <div class="turn-points">Turn: <strong id="turn-points">0</strong>
-          <span id="sel-points" class="sel-points"></span></div>
+  <!-- LOBBY -->
+  <main id="lobby" class="screen hidden">
+    <section class="card">
+      <div class="room-head">
+        <div>
+          <div class="muted" style="margin:0">Room code</div>
+          <div class="room-code" id="room-code"></div>
+        </div>
+        <button id="share-btn" class="btn primary">Invite friends</button>
       </div>
-
-      <div id="tray" class="tray"></div>
-
-      <div id="banner" class="banner hidden"></div>
-      <div id="turn-banner" class="turn-banner"></div>
-
-      <div class="controls">
-        <button id="roll-btn" class="btn primary big">Roll</button>
-        <button id="aside-btn" class="btn big">Set aside</button>
-        <button id="bank-btn" class="btn big">Bank</button>
-      </div>
-      <div id="hint" class="hint"></div>
-      <div id="fair" class="fair"></div>
+      <ul class="members" id="members"></ul>
     </section>
 
-    <section class="side">
-      <details class="card rules">
-        <summary>Scoring</summary>
-        <div id="rules-body-2"></div>
+    <section class="card">
+      <h2 id="pick-title">Pick a game</h2>
+      <div class="game-grid" id="game-grid"></div>
+      <div class="opts" id="opts"></div>
+      <div class="start-row">
+        <button id="start-btn" class="btn primary big">Start game</button>
+      </div>
+      <p class="start-note" id="start-note"></p>
+    </section>
+
+    <button id="leave-btn" class="btn ghost">Leave session</button>
+  </main>
+
+  <!-- PLAY -->
+  <main id="play" class="screen hidden">
+    <div class="play-main">
+      <div class="play-bar">
+        <div class="gname" id="play-name"></div>
+        <button id="to-lobby" class="btn ghost small">Lobby</button>
+      </div>
+      <div id="game-root"></div>
+    </div>
+    <aside class="side">
+      <div id="fair-warn" class="card fair-warn hidden">⚠️ A roll failed its fairness check — the host’s game may have been tampered with.</div>
+      <details class="card rules" id="rules-card">
+        <summary>How to play</summary>
+        <div id="rules-body"></div>
       </details>
       <details class="card log-card" id="log-card">
         <summary>Game log</summary>
         <ol id="log" class="log"></ol>
       </details>
-      <button id="leave-btn" class="btn ghost">Leave game</button>
-    </section>
+      <button id="leave-btn-2" class="btn ghost">Leave session</button>
+    </aside>
   </main>
-
-  <!-- Waiting for friend -->
-  <div id="invite" class="overlay hidden">
-    <div class="modal">
-      <h2>Invite your friend</h2>
-      <p>Send them this link:</p>
-      <div class="row">
-        <input id="invite-link" readonly />
-        <button id="copy-btn" class="btn primary">Copy link</button>
-      </div>
-      <p class="muted">Room code: <strong id="invite-code" class="code"></strong></p>
-      <p class="waiting"><span class="spinner"></span> Waiting for your friend to join…</p>
-      <button id="invite-cancel" class="btn ghost">Cancel</button>
-    </div>
-  </div>
 
   <!-- Game over -->
   <div id="gameover" class="overlay hidden">
     <div class="modal">
       <h2 id="go-title"></h2>
       <div id="go-scores"></div>
-      <button id="rematch-btn" class="btn primary big">Play again</button>
-      <button id="go-leave" class="btn ghost">Back to lobby</button>
+      <button id="again-btn" class="btn primary big">Play again</button>
+      <button id="go-lobby" class="btn ghost">Choose another game</button>
+      <p class="muted" id="go-wait" style="margin:0">Waiting for the host…</p>
+      <button id="go-close" class="btn ghost">View the board</button>
     </div>
   </div>
 

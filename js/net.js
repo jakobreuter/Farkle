@@ -1,48 +1,56 @@
-// Connection between the two players' browsers.
+// Message relay between everyone in a session.
 //
-// Messages go through public MQTT brokers over secure WebSockets (wss://, port 443-style
-// TLS). Unlike a direct browser-to-browser (WebRTC) link, this works on any network:
-// cellular, home Wi-Fi, strict routers. And when an iPhone pauses Safari in the
-// background, it simply reconnects. We connect to several brokers at once and
-// de-duplicate, so the game keeps working if one of them is down.
+// Messages go through public MQTT brokers over secure WebSockets. That works on any
+// network (cellular, Wi-Fi, strict routers) and reconnects cleanly when a phone pauses
+// the page. We connect to several brokers at once and de-duplicate, so the game keeps
+// working if one of them is down. Every message reaches everyone in the room; a `to`
+// field marks messages meant for one person.
 //
-// Fairness doesn't depend on the relay: dice come from the commit–reveal scheme in rng.js,
-// which the guest verifies itself.
+// Presence: everyone sends a tiny heartbeat every few seconds. Someone who's been
+// silent for DEAD_MS is "away" (closed the page, switched apps, lost signal).
 //
-// Testing overrides: ?transport=bc (two tabs, same browser, no network) and
-// ?broker=wss://host/path (use one specific broker).
+// Testing overrides: ?transport=bc (tabs in one browser, no network) and
+// ?broker=url[,url] (use specific brokers).
 
 const BROKERS = [
   'wss://broker.hivemq.com:8884/mqtt',
   'wss://broker.emqx.io:8084/mqtt',
   'wss://test.mosquitto.org:8081/mqtt',
 ];
-const TOPIC_PREFIX = 'farkle-dice-game/v1/';
-const PING_MS = 2500;
-const DEAD_MS = 9000;
+const TOPIC_PREFIX = 'farkle-dice-game/v2/';
+const PING_MS = 2000;
+export const DEAD_MS = 8000;
 
 function rid(n = 12) {
   const b = new Uint8Array(n);
   crypto.getRandomValues(b);
-  return [...b].map((x) => x.toString(36).padStart(2, '0')).join('').slice(0, n);
+  return [...b].map((x) => (x % 36).toString(36)).join('');
 }
 
 /**
- * role: 'host' | 'guest'
- * handlers: { onReady(), onConnect(), onDisconnect(), onData(msg), onError(text) }
- *   onReady      – we're connected to the relay (fires again after every reconnect)
- *   onConnect    – we're hearing from the other player
- *   onDisconnect – the other player went quiet
- * returns { send(msg), isConnected() }
+ * me: this player's id (stable across reloads of the same tab)
+ * h: { onReady(), onMessage(msg, fromPid), onPresence(pid, alive) }
  */
-function createEndpoint(code, role, h) {
+export function createRelay(code, me, h) {
   const q = new URLSearchParams(location.search);
-  const sid = rid();
+  const boot = rid(8); // new on every page load, so a reload isn't mistaken for old messages
   const topic = TOPIC_PREFIX + code;
-  const lastSeq = new Map(); // sender session -> last message number
+  const lastSeq = new Map(); // `${pid}:${boot}` -> last message number
+  const lastSeen = new Map(); // pid -> time
+  const alive = new Set();
   let seq = 0;
-  let lastSeen = 0;
-  let alive = false;
+
+  function seen(pid) {
+    lastSeen.set(pid, Date.now());
+    if (!alive.has(pid)) {
+      alive.add(pid);
+      h.onPresence?.(pid, true);
+    }
+  }
+
+  function markGone(pid) {
+    if (alive.delete(pid)) h.onPresence?.(pid, false);
+  }
 
   function receive(raw) {
     let env;
@@ -51,34 +59,36 @@ function createEndpoint(code, role, h) {
     } catch {
       return;
     }
-    if (!env || env.r === role || env.s === sid || typeof env.n !== 'number') return;
-    // Same message arrives once per broker; also drop anything older than what we've seen.
-    if (env.n <= (lastSeq.get(env.s) || 0)) return;
-    lastSeq.set(env.s, env.n);
-    lastSeen = Date.now();
-    if (!alive) {
-      alive = true;
-      h.onConnect?.();
+    if (!env || typeof env.p !== 'string' || env.p === me || typeof env.n !== 'number') return;
+    const key = `${env.p}:${env.b}`;
+    if (env.n <= (lastSeq.get(key) || 0)) return; // duplicate (one copy per broker) or stale
+    lastSeq.set(key, env.n);
+    if (env.m?.t === '__bye') {
+      markGone(env.p);
+      return;
     }
-    if (env.m?.t !== '__ping') h.onData(env.m);
+    seen(env.p);
+    if (env.m?.t === '__ping') return;
+    if (env.to && env.to !== me) return;
+    h.onMessage(env.m, env.p);
   }
 
-  let links; // [{ publish(payload, isPing), connected(), wake() }]
+  let links;
   if (q.get('transport') === 'bc') {
     const ch = new BroadcastChannel(topic);
     ch.onmessage = (e) => receive(e.data);
-    links = [{ publish: (p) => ch.postMessage(p), connected: () => true, wake() {} }];
+    links = [{ publish: (p) => ch.postMessage(p), wake() {} }];
     setTimeout(() => h.onReady?.(), 30);
   } else {
     if (!window.mqtt) {
-      h.onError?.('Could not load the connection library — check your internet and reload.');
-      return { send() {}, isConnected: () => false };
+      setTimeout(() => h.onError?.('Could not load the connection library — check your internet and reload.'));
+      return { send() {}, isAlive: () => false, leave() {} };
     }
     const urls = q.get('broker') ? q.get('broker').split(',') : BROKERS;
     let everConnected = false;
     links = urls.map((url) => {
       const c = window.mqtt.connect(url, {
-        clientId: `farkle_${rid(10)}`,
+        clientId: `fk_${rid(12)}`,
         clean: true,
         keepalive: 20,
         reconnectPeriod: 2000,
@@ -94,11 +104,10 @@ function createEndpoint(code, role, h) {
       c.on('message', (_t, payload) => receive(payload));
       c.on('error', () => {});
       return {
-        publish: (p, isPing) => {
-          if (isPing && !c.connected) return; // don't queue heartbeats while offline
-          c.publish(topic, p, { qos: isPing ? 0 : 1 });
+        publish: (p, light) => {
+          if (light && !c.connected) return; // don't queue heartbeats while offline
+          c.publish(topic, p, { qos: light ? 0 : 1 });
         },
-        connected: () => c.connected,
         wake: () => { if (!c.connected && !c.reconnecting) c.reconnect(); },
       };
     });
@@ -107,20 +116,20 @@ function createEndpoint(code, role, h) {
     }, 12000);
   }
 
-  function send(m) {
-    const payload = JSON.stringify({ r: role, s: sid, n: ++seq, m });
-    const isPing = m?.t === '__ping';
+  function send(m, to) {
+    const env = { p: me, b: boot, n: ++seq, m };
+    if (to) env.to = to;
+    const payload = JSON.stringify(env);
+    const light = m?.t === '__ping' || m?.light;
     for (const l of links) {
-      try { l.publish(payload, isPing); } catch { /* ignore */ }
+      try { l.publish(payload, light); } catch { /* ignore */ }
     }
   }
 
   setInterval(() => {
     send({ t: '__ping' });
-    if (alive && Date.now() - lastSeen > DEAD_MS) {
-      alive = false;
-      h.onDisconnect?.();
-    }
+    const now = Date.now();
+    for (const pid of [...alive]) if (now - (lastSeen.get(pid) || 0) > DEAD_MS) markGone(pid);
   }, PING_MS);
 
   // Phones pause pages in the background; reconnect right away when we come back.
@@ -132,8 +141,9 @@ function createEndpoint(code, role, h) {
   addEventListener('pageshow', (e) => e.persisted && wake());
   addEventListener('online', wake);
 
-  return { send, isConnected: () => alive };
+  return {
+    send,
+    isAlive: (pid) => pid === me || alive.has(pid),
+    leave: () => send({ t: '__bye' }),
+  };
 }
-
-export const createHost = (code, h) => createEndpoint(code, 'host', h);
-export const createGuest = (code, h) => createEndpoint(code, 'guest', h);

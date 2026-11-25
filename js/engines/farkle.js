@@ -84,7 +84,7 @@ export function hasScore(values) {
 
 export function newGame(names, target = 10000, firstPlayer = 0) {
   return {
-    players: names.map((name) => ({ name, score: 0 })),
+    players: names.map((n) => (typeof n === 'string' ? { name: n, score: 0 } : { ...n, score: 0 })),
     current: firstPlayer,
     firstPlayer,
     turnPoints: 0,
