@@ -79,11 +79,12 @@ test('spin walks, halts at the crossroads, choices are actions with permissions'
 test('paydays pay when passed; negative cash takes loans; net worth', () => {
   const p = { cash: 5000, loans: 0, house: null, partner: false, kids: 0 };
   const s = life.setup(P(2), {}, { now: 0, first: 0 });
-  s.players[0] = { ...s.players[0], pos: L.BOARD.find((x) => x.t === 'payday' && x.lane === 'work').id - 1, career: { name: 'X', icon: 'x', salary: 50000 }, route: { fork1: 1 } };
+  s.players[0] = { ...s.players[0], pos: L.BOARD.find((x) => x.stop === 'fork1').id, career: { name: 'X', icon: 'x', salary: 50000 }, route: { fork1: 1 } };
   s.players[0].cash = 0;
   // the space after the payday is a cash event in the work lane
   let t = act(s, { type: 'spin' }, 0, [1]);
   assert.equal(L.BOARD[t.move.path[0]].t, 'payday');
+  assert.equal(L.BOARD[t.move.path[1]].pool, 'life');
   t = act(t, { type: 'arrive' }, -1, [8]); // 'The water heater gives up' −8k
   assert.equal(t.players[0].cash, 50000 - 8000);
   // loans
@@ -123,19 +124,24 @@ test('houses: buying takes loans when short; upgrade sells back the old one', ()
 test('retirement order bonus; retired players are skipped; game ends when all retire', () => {
   let s = life.setup(P(3), {}, { now: 0, first: 0 });
   for (const p of s.players) { p.pos = L.RETIRE_ID - 1; p.route = { fork1: 0, fork2: 0 }; }
-  s = settle(act(s, { type: 'spin' }, 0, [4]));
+  s.players[2].pos = L.RETIRE_ID - 6;
+  s = settle(act(s, { type: 'spin' }, 0, [4])); // overshoot is fine: retirement halts you
   assert.equal(s.players[0].retired, true);
   assert.equal(s.players[0].cash, L.START_CASH + L.RETIRE_BONUS[0]);
   assert.equal(s.current, 1);
   s = settle(act(s, { type: 'spin' }, 1, [0]));
-  assert.equal(s.current, 2);
-  s = settle(act(s, { type: 'spin' }, 2, [0]));
-  assert.equal(s.current, 1, 'retired P0 is skipped');
-  assert.equal(s.players[1].cash, L.START_CASH + L.RETIRE_BONUS[1]);
-  assert.equal(s.phase, 'turn');
-  // P1 already retired; only P2 left
   assert.equal(s.players[1].retired, true);
+  assert.equal(s.players[1].cash, L.START_CASH + L.RETIRE_BONUS[1]);
   assert.equal(s.current, 2);
+  s.players[2].cash = 0;
+  s = settle(act(s, { type: 'spin' }, 2, [0], 0));
+  if (s.phase === 'choose') s = settle(act(s, { type: 'choose', i: L.botChoice(s, 2) }, 2));
+  assert.equal(s.current, 2, 'retired players are skipped');
+  assert.equal(s.phase, 'turn');
+  s = settle(act(s, { type: 'spin' }, 2, [9]));
+  assert.equal(s.phase, 'over');
+  assert.equal(life.results(s).over, true);
+  assert.equal(s.players[2].rank, 3);
 });
 
 test('bot never chooses an illegal action', () => {
