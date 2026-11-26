@@ -34,7 +34,8 @@ function playOut(g, nPlayers, maxSteps = 20000) {
       try { apply(a, seat); } catch (e) { throw new Error(`${g.id}: bot ${seat} chose an illegal move ${JSON.stringify(a)} — ${e.message}`); }
       moved = true;
     }
-    if (!moved) throw new Error(`${g.id}: nobody can move (phase ${s.phase})`);
+    // in real-time games bots may still be "thinking"; turn-based games must always have a mover
+    if (!moved && !g.realtime) throw new Error(`${g.id}: nobody can move (phase ${s.phase})`);
   }
   throw new Error(`${g.id}: game did not finish`);
 }
