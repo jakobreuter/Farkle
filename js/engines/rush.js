@@ -22,14 +22,14 @@ export const DISTRICTS = {
 export const DISTRICT_IDS = Object.keys(DISTRICTS);
 
 export const ACTIONS = {
-  windfall: { name: 'Windfall', icon: '🎁', value: 1, count: 6, text: 'Draw 2 cards.' },
-  rentday: { name: 'Rent Day', icon: '🏠', value: 1, count: 5, text: 'Every other player pays you rent for one of your districts.' },
-  tax: { name: 'Tax Collector', icon: '🧾', value: 3, count: 3, text: 'One player pays you 4.' },
-  party: { name: 'Block Party', icon: '🎉', value: 2, count: 2, text: 'Every other player pays you 2.' },
-  swipe: { name: 'Swipe', icon: '🫳', value: 3, count: 3, text: 'Take a property from a player (not from a complete set).' },
-  swap: { name: 'Swap', icon: '🔁', value: 3, count: 3, text: 'Trade one of your properties for one of theirs (neither from a complete set).' },
-  takeover: { name: 'Takeover', icon: '🏴', value: 5, count: 1, text: 'Take a complete set from a player.' },
-  shield: { name: 'Shield', icon: '🛡️', value: 4, count: 3, text: 'Block an action played against you.' },
+  windfall: { name: 'Windfall', icon: '🎁', value: 1, count: 6, short: 'Draw 2 cards', text: 'Draw 2 cards.' },
+  rentday: { name: 'Rent Day', icon: '🏠', value: 1, count: 5, short: 'Everyone pays you rent', text: 'Every other player pays you rent for one of your districts.' },
+  tax: { name: 'Tax Collector', icon: '🧾', value: 3, count: 3, short: 'Take 4 from 1 player', text: 'One player pays you 4.' },
+  party: { name: 'Block Party', icon: '🎉', value: 2, count: 2, short: 'Take 2 from everyone', text: 'Every other player pays you 2.' },
+  swipe: { name: 'Swipe', icon: '🫳', value: 3, count: 3, short: 'Steal 1 property', text: 'Take a property from a player (not from a complete set).' },
+  swap: { name: 'Swap', icon: '🔁', value: 3, count: 3, short: 'Trade 1 property', text: 'Trade one of your properties for one of theirs (neither from a complete set).' },
+  takeover: { name: 'Takeover', icon: '🏴', value: 5, count: 1, short: 'Steal a full set', text: 'Take a complete set from a player.' },
+  shield: { name: 'Shield', icon: '🛡️', value: 4, count: 3, short: 'Block an action', text: 'Block an action played against you.' },
 };
 
 export const WIN_SETS = 3;
@@ -108,7 +108,7 @@ function drawInto(s, hand, rand) {
     }
     if (!s.deck.length) break;
     if (!(idx >= 0 && idx < s.deck.length)) throw new Error('bad draw');
-    hand.push(s.deck.splice(idx, 1)[0]);
+    hand.unshift(s.deck.splice(idx, 1)[0]); // newest cards at the front of the hand
   }
 }
 

@@ -1,6 +1,6 @@
 # 🎲 Game Night
 
-Play games in the browser with friends: Farkle, Yacht, Draw, Lucky Streak and Property Rush. No sign-up, works on phones.
+Play games in the browser with friends: Farkle, Yacht, Draw, Lucky Streak, Property Rush and Secret Face. No sign-up, works on phones.
 
 **Play:** https://jakobreuter.github.io/Farkle/
 
@@ -21,6 +21,8 @@ can still finish their turns; the game simply waits when it's the away player's 
 - **Lucky Streak**: an original press-your-luck card game. Flip cards and bust on a repeated number.
 - **Property Rush**: an original set-collecting card game for 2–5 players. Bank money, place properties, charge rent,
   swipe and swap deals, and block with Shields. The first to 3 complete sets wins.
+- **Secret Face**: an original 2-player deduction game with 24 illustrated characters. Ask yes/no questions
+  (answered automatically), flip faces down, and guess the other player's face.
 
 ## Fair randomness
 - Every die, card and word pick is exactly uniform. There is no weighting, no streak or "catch-up" logic, and every player is handled the same way.

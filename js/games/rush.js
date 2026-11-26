@@ -16,7 +16,7 @@ const rulesHTML = () => `
   <table>${Object.values(A).map((a) => `<tr><td>${a.icon} ${a.name} ×${a.count}</td><td>${esc(a.text)}</td></tr>`).join('')}</table>
   <table>${R.DISTRICT_IDS.map((d) => `<tr><td><span class="dsw" style="background:${D[d].color}"></span>${D[d].name} (${D[d].size})</td><td>rent ${D[d].rent.join(' / ')}</td></tr>`).join('')}</table>`;
 
-// Plain text cards: a colored name bar, the effect written out, and the bank value.
+// Plain text cards, built to read at a glance: colored name bar, one big fact, bank value.
 function rentRows(d) {
   return d.rent.map((r, k) => {
     const full = k + 1 === d.size;
@@ -24,18 +24,31 @@ function rentRows(d) {
   }).join('');
 }
 
-function cardHTML(id, extra = '') {
+function cardHTML(id, extra = '', caption = '') {
   const c = R.card(id);
+  const cap = caption ? `<div class="rc-cap">${esc(caption)}</div>` : '';
   const wrap = (cls, head, body, foot, style = '') => `<div class="rc ${cls} ${extra}" data-id="${id}">
-    <div class="rc-head" ${style}>${head}</div><div class="rc-body">${body}</div><div class="rc-foot">${foot}</div></div>`;
-  if (c.type === 'money') return wrap('money', 'Money', `<div class="rc-big">${c.value}</div>`, `Bank value ${c.value}`);
+    <div class="rc-head" ${style}>${head}</div><div class="rc-body">${body}</div><div class="rc-foot">${foot}</div>${cap}</div>`;
+  if (c.type === 'money') return wrap('money', 'MONEY', `<div class="rc-big">${c.value}</div>`, `Bank ${c.value}`);
   if (c.type === 'prop') {
     const d = D[c.district];
-    return wrap('prop', esc(d.name), `<div class="rc-sub">Rent · set of ${d.size}</div>${rentRows(d)}`, `Value ${c.value}`, `style="background:${d.color}"`);
+    return wrap('prop', esc(d.name), `<div class="rc-sub">Rent</div>${rentRows(d)}`, `Value ${c.value}`, `style="background:${d.color}"`);
   }
-  if (c.type === 'wild') return wrap('prop wild', 'Wild property', '<div class="rc-text">Joins any district you choose. Stays there once placed.</div>', 'Value 0');
+  if (c.type === 'wild') return wrap('prop wild', 'WILD', '<div class="rc-icon">🌈</div><div class="rc-short">Any district</div>', 'Value 0');
   const a = A[c.action];
-  return wrap('action', `${a.icon} ${esc(a.name)}`, `<div class="rc-text">${esc(a.text)}</div>`, `Bank value ${c.value}`);
+  return wrap('action', esc(a.name), `<div class="rc-icon">${a.icon}</div><div class="rc-short">${esc(a.short)}</div>`, `Bank ${c.value}`);
+}
+
+/** A property on someone's table, as a tappable card, captioned with where it sits. */
+function tableCard(p, id, attrs, extra = '') {
+  const d = R.districtOf(p, id);
+  const cap = R.card(id).type === 'wild' ? `Wild in ${D[d].name}` : '';
+  return `<button class="cardbtn" ${attrs}>${cardHTML(id, `mini ${extra}`, cap)}</button>`;
+}
+
+function myTableHTML(p) {
+  return `<details class="sheet-table"><summary>Your table · ${R.completeSets(p)}/${R.WIN_SETS} sets · Bank ${R.bankTotal(p)}</summary>
+    <div class="districts">${districtsHTML(p, true)}</div></details>`;
 }
 
 function chipHTML(id) {
@@ -173,23 +186,44 @@ export default {
             : '<p class="muted">You need a property on the table to charge rent.</p>';
         } else if (a === 'tax') {
           choices = `<div class="optlist">${others().map((i) => `<button class="btn opt" data-do="play" data-t="${i}">${esc(state.players[i].name)} <small>has ${R.assetValue(state.players[i])} in assets</small></button>`).join('')}</div>`;
-        } else if (a === 'swipe' || (a === 'swap' && !flow.take)) {
-          const list = others().flatMap((i) => R.loose(state.players[i]).map((pid) => ({ i, pid })));
+        } else if ((a === 'swipe' || a === 'swap') && flow.take == null) {
           const mineLoose = R.loose(p);
+          const rows = others().map((i) => {
+            const op = state.players[i];
+            const cards = R.loose(op);
+            if (!cards.length) return '';
+            return `<div class="pickrow"><div class="pickwho">${esc(op.name)}’s properties</div><div class="pickcards">${cards.map((pid) => tableCard(op, pid, `data-do="take" data-t="${i}" data-take="${pid}"`)).join('')}</div></div>`;
+          }).join('');
           if (a === 'swap' && !mineLoose.length) choices = '<p class="muted">You need a property (not in a complete set) to offer.</p>';
-          else choices = list.length ? `<p class="muted">${a === 'swap' ? 'Step 1: pick the property you want.' : 'Pick a property to take.'}</p><div class="optlist">${list.map(({ i, pid }) => `<button class="btn opt" style="--c:${R.card(pid).type === 'wild' ? '#888' : D[R.districtOf(state.players[i], pid)].color}" data-do="${a === 'swap' ? 'take' : 'play'}" data-t="${i}" data-take="${pid}">${esc(state.players[i].name)}: ${esc(R.card(pid).type === 'wild' ? `Wild (${D[R.districtOf(state.players[i], pid)].name})` : R.cardName(pid))}</button>`).join('')}</div>`
-              : '<p class="muted">Nobody has a property you can take right now.</p>';
-        } else if (a === 'swap') {
-          choices = `<p class="muted">Step 2: pick what you give in return.</p><div class="optlist">${R.loose(p).map((pid) => `<button class="btn opt" style="--c:${D[R.districtOf(p, pid)].color}" data-do="play" data-t="${flow.target}" data-take="${flow.take}" data-give="${pid}">${esc(R.card(pid).type === 'wild' ? `Wild (${D[R.districtOf(p, pid)].name})` : R.cardName(pid))}</button>`).join('')}</div>`;
+          else choices = rows ? `<p class="step">${a === 'swap' ? 'Step 1 of 2 — tap the property you want' : 'Tap the property to take'}</p>${rows}<p class="muted small">Cards in complete sets are protected.</p>`
+            : '<p class="muted">Nobody has a property you can take right now.</p>';
+        } else if (a === 'swap' && flow.give == null) {
+          const op = state.players[flow.target];
+          choices = `<p class="step">Step 2 of 2 — tap what you give</p>
+            <div class="trade"><div><div class="pickwho">You get</div>${cardHTML(flow.take, 'mini', R.card(flow.take).type === 'wild' ? `Wild in ${D[R.districtOf(op, flow.take)].name}` : '')}</div></div>
+            <div class="pickrow"><div class="pickwho">Your properties</div><div class="pickcards">${R.loose(p).map((pid) => tableCard(p, pid, `data-do="give" data-give="${pid}"`)).join('')}</div></div>
+            <button class="btn ghost" data-do="back">Back</button>`;
+        } else if (a === 'swipe' || a === 'swap') {
+          const op = state.players[flow.target];
+          const get = cardHTML(flow.take, 'mini', R.card(flow.take).type === 'wild' ? `Wild in ${D[R.districtOf(op, flow.take)].name}` : '');
+          choices = a === 'swap'
+            ? `<div class="trade"><div><div class="pickwho">You give</div>${cardHTML(flow.give, 'mini')}</div><div class="arrow">⇄</div><div><div class="pickwho">You get</div>${get}</div></div>
+               <p class="muted">Trade with ${esc(op.name)}.</p>
+               <button class="btn primary" data-do="play" data-t="${flow.target}" data-take="${flow.take}" data-give="${flow.give}">Confirm swap</button><button class="btn ghost" data-do="back">Back</button>`
+            : `<div class="trade"><div><div class="pickwho">You take from ${esc(op.name)}</div>${get}</div></div>
+               <button class="btn primary" data-do="play" data-t="${flow.target}" data-take="${flow.take}">Confirm swipe</button><button class="btn ghost" data-do="back">Back</button>`;
         } else if (a === 'takeover') {
           const list = others().flatMap((i) => R.DISTRICT_IDS.filter((d) => R.isComplete(state.players[i], d)).map((d) => ({ i, d })));
-          choices = list.length ? `<div class="optlist">${list.map(({ i, d }) => `<button class="btn opt" style="--c:${D[d].color}" data-do="play" data-t="${i}" data-d="${d}">${esc(state.players[i].name)}: ${esc(D[d].name)} set</button>`).join('')}</div>`
+          choices = list.length ? list.map(({ i, d }) => `<div class="pickrow"><div class="pickwho">${esc(state.players[i].name)}’s ${esc(D[d].name)} set</div>
+              <div class="pickcards">${state.players[i].props[d].map((pid) => cardHTML(pid, 'mini')).join('')}</div>
+              <button class="btn opt" style="--c:${D[d].color}" data-do="play" data-t="${i}" data-d="${d}">Take this set</button></div>`).join('')
             : '<p class="muted">Nobody has a complete set yet.</p>';
         } else if (a === 'shield') {
           choices = '<p class="muted">Keep it in your hand — you’ll be offered it when someone plays an action against you.</p>';
         }
       }
-      openSheet(`${head}<h3>${A[a].icon} ${esc(A[a].name)}</h3><p class="muted">${esc(A[a].text)}</p>${body}${choices}${bankBtn}${cancel}`);
+      const stepping = flow.take != null;
+      openSheet(`${stepping ? '' : head}<h3>${A[a].icon} ${esc(A[a].name)}</h3><p class="muted">${esc(A[a].text)}</p>${body}${choices}${stepping ? '' : bankBtn}${cancel}${myTableHTML(p)}`);
     }
 
     // ---------- answering an action aimed at me ----------
@@ -219,12 +253,13 @@ export default {
           <div class="row2"><button class="btn" data-do="auto">Pick for me</button>${shieldBtn}</div>
           <p class="muted small">Auto-pays in <span class="cd">${secs}</span>s</p>`);
       }
+      const byP = state.players[pd.by];
       let what = '';
-      if (pd.kind === 'swipe') what = `take your <b>${esc(R.cardName(pd.take))}</b>`;
-      if (pd.kind === 'swap') what = `swap their <b>${esc(R.cardName(pd.give))}</b> for your <b>${esc(R.cardName(pd.take))}</b>`;
-      if (pd.kind === 'takeover') what = `take your whole <b>${esc(D[pd.district].name)}</b> set`;
-      openSheet(`<h3>${act.icon} ${esc(by.name)} played ${esc(act.name)}</h3><p class="owe">They want to ${what}.</p>
-        <button class="btn primary" data-do="accept">OK</button>${shieldBtn}<p class="muted small">Goes through automatically in <span class="cd">${secs}</span>s</p>`);
+      if (pd.kind === 'swipe') what = `<div class="trade"><div><div class="pickwho">They take</div>${cardHTML(pd.take, 'mini')}</div></div>`;
+      if (pd.kind === 'swap') what = `<div class="trade"><div><div class="pickwho">You give</div>${cardHTML(pd.take, 'mini')}</div><div class="arrow">⇄</div><div><div class="pickwho">You get</div>${cardHTML(pd.give, 'mini', R.card(pd.give).type === 'wild' ? `Wild in ${D[R.districtOf(byP, pd.give)].name}` : '')}</div></div>`;
+      if (pd.kind === 'takeover') what = `<div class="pickwho">They take your whole ${esc(D[pd.district].name)} set</div><div class="pickcards">${p.props[pd.district].map((id) => cardHTML(id, 'mini')).join('')}</div>`;
+      openSheet(`<h3>${act.icon} ${esc(by.name)} played ${esc(act.name)}</h3>${what}
+        <button class="btn primary" data-do="accept">OK</button>${shieldBtn}<p class="muted small">Goes through automatically in <span class="cd">${secs}</span>s</p>${myTableHTML(p)}`);
     }
 
     function discardSheet() {
@@ -250,7 +285,11 @@ export default {
         case 'cancel': return closeSheet();
         case 'bank': return send({ type: 'bank', card: flow.id });
         case 'place': return send({ type: 'place', card: flow.id, district: d.d });
-        case 'take': flow.take = Number(d.take); flow.target = Number(d.t); return cardSheet();
+        case 'take': flow.take = Number(d.take); flow.target = Number(d.t); flow.give = null; return cardSheet();
+        case 'give': flow.give = Number(d.give); return cardSheet();
+        case 'back':
+          if (flow.give != null) flow.give = null; else { flow.take = null; flow.target = null; }
+          return cardSheet();
         case 'play': return send({ type: 'play', card: flow.id, district: d.d, target: d.t != null ? Number(d.t) : undefined, take: d.take != null ? Number(d.take) : undefined, give: d.give != null ? Number(d.give) : undefined });
         case 'toggle': { const id = Number(d.id); if (paySel.has(id)) paySel.delete(id); else paySel.add(id); return respondSheet(); }
         case 'pay': { const cards = [...paySel]; paySel = new Set(); return send({ type: 'respond', r: { type: 'pay', cards } }); }
@@ -275,6 +314,7 @@ export default {
 
     // ---------- render ----------
     let handKey = '';
+    let newIds = new Set();
     function render(full = true) {
       if (!state) return;
       const seat = mySeat();
@@ -302,10 +342,11 @@ export default {
         q('.mine .districts').innerHTML = districtsHTML(p, false);
         q('.hc').textContent = `(${p.hand.length})`;
         const tap = myTurn() && !waiting;
-        const key = `${p.hand.join()}|${tap}`;
+        const key = `${p.hand.join()}|${tap}|${[...newIds].join()}`;
         if (key !== handKey) { // rebuild only when it changes, so taps aren't lost
           handKey = key;
-          q('.hand').innerHTML = p.hand.map((id) => cardHTML(id, tap ? 'tap' : '')).join('');
+          q('.hand').innerHTML = p.hand.map((id) => cardHTML(id, `${tap ? 'tap' : ''}${newIds.has(id) ? ' new' : ''}`)).join('');
+          if (newIds.size) q('.hand').scrollLeft = 0;
         }
       } else {
         q('.mine').innerHTML = '<p class="muted">Watching this game.</p>';
@@ -345,6 +386,15 @@ export default {
       update(next) {
         const old = state;
         state = next;
+        const seat = mySeat();
+        if (seat >= 0) {
+          if (next.current !== seat) newIds = new Set();
+          else if (old) {
+            const had = new Set(old.players[seat].hand);
+            const added = next.players[seat].hand.filter((id) => !had.has(id));
+            if (added.length) newIds = new Set(added);
+          }
+        }
         waiting = false;
         render();
         if (old && next.actionNo !== lastEventNo && next.event?.kind === 'action' && next.event.seat !== mySeat()) {
