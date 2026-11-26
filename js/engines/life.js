@@ -44,10 +44,10 @@ export const DEGREE_CAREERS = [
   { name: 'Marine Biologist', icon: '🐬', salary: 60 * K },
   { name: 'Architect', icon: '📐', salary: 65 * K },
   { name: 'Engineer', icon: '⚙️', salary: 70 * K },
-  { name: 'Veterinarian', icon: '🐾', salary: 70 * K },
-  { name: 'Software Dev', icon: '💻', salary: 75 * K },
-  { name: 'Pharmacist', icon: '💊', salary: 80 * K },
-  { name: 'Surgeon', icon: '🩺', salary: 90 * K },
+  { name: 'Veterinarian', icon: '🐾', salary: 75 * K },
+  { name: 'Software Dev', icon: '💻', salary: 80 * K },
+  { name: 'Pharmacist', icon: '💊', salary: 85 * K },
+  { name: 'Surgeon', icon: '🩺', salary: 95 * K },
 ];
 export const ALL_CAREERS = [...BASIC_CAREERS, ...DEGREE_CAREERS];
 
@@ -105,14 +105,14 @@ export const EVENTS = {
     ['Found an old savings bond.', 5],
   ],
   risk: [
-    ['Your friend’s food-truck empire booms — you invested early!', 40],
+    ['Your friend’s food-truck empire booms — you invested early!', 60],
     ['Bought a vintage sailboat. It sank.', -30],
-    ['Patent for self-folding socks sells!', 50],
+    ['Patent for self-folding socks sells!', 80],
     ['Your barber’s stock tip was… wrong.', -25],
-    ['Hot streak at the county fair games.', 20],
+    ['Hot streak at the county fair games.', 40],
     ['The smart-toaster startup fizzles.', -20],
-    ['Rare sneakers resell for a fortune.', 25],
-    ['Hot-air balloon tour business pops.', -15],
+    ['Rare sneakers resell for a fortune.', 50],
+    ['Hot-air balloon tour business pops.', -35],
   ],
 };
 
@@ -171,7 +171,7 @@ const ALL6 = [0, 1, 2, 3, 4, 5];
   link(college[college.length - 1], main1[0]);
   link(work[work.length - 1], main1[0]);
   const safe = lay(['payday', 'cash', 'family', 'cash', 'payday', 'house', 'cash', 'cash', 'payday'], L3, 6, 1, { pool: 'safe', lane: 'safe' });
-  const risky = lay(['cash', 'cash', 'payday', 'cash', 'family', 'cash', 'cash', 'house', 'cash'], R3, 6, 1, { pool: 'risk', lane: 'risky' });
+  const risky = lay(['cash', 'payday', 'cash', 'cash', 'family', 'cash', 'payday', 'house', 'cash'], R3, 6, 1, { pool: 'risk', lane: 'risky' });
   const fork2 = main1[main1.length - 1];
   link(fork2, safe[0]);
   link(fork2, risky[0]);
@@ -257,8 +257,7 @@ function pickDistinct(n, k, r) {
 }
 
 export function careerPool(p, kind) {
-  if (kind === 'grad') return DEGREE_CAREERS;
-  return p.college ? ALL_CAREERS : BASIC_CAREERS;
+  return p.college || kind === 'grad' ? DEGREE_CAREERS : BASIC_CAREERS;
 }
 
 export function newGame(players, first = 0) {
@@ -396,7 +395,7 @@ function arrive(s, rand, now) {
       } else if (sp.stop === 'fork2') {
         s.pending = { kind: 'fork2', title: st.title, text: st.text, options: [
           { key: 'safe', icon: '🛡️', name: 'Safe route', note: '3 paydays · small surprises' },
-          { key: 'risky', icon: '🎢', name: 'Risky route', note: '1 payday · huge wins and losses' },
+          { key: 'risky', icon: '🎢', name: 'Risky route', note: '2 paydays · huge wins and losses' },
         ] };
         s.phase = 'choose';
       } else {

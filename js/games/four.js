@@ -121,14 +121,13 @@ export default {
     let state = null;
     let aim = null; // column the ghost disc hovers over
     let pending = 0;
-    let dropUntil = 0;
     let uiTimer = null;
     let countdown = null;
     let lastKey = '';
 
     const mySeat = () => api.mySeat();
     const myTurn = () => state && state.phase === 'play' && state.current === mySeat();
-    const canPlay = () => myTurn() && !pending && Date.now() >= dropUntil;
+    const canPlay = () => myTurn() && !pending;
     const nameOf = (i) => (i === mySeat() ? 'You' : state.players[i].name);
     const isBot = (i) => String(state.players[i].pid).startsWith('bot-');
 
@@ -243,13 +242,14 @@ export default {
       }
       q('.fr-gameno').textContent = state.bestOf > 1 ? `Game ${state.gameNo}` : '';
       q('.fr-mid').innerHTML = state.bestOf > 1
-        ? `<span>Best of ${state.bestOf}</span><b>${state.players[0].wins}<em>–</em>${state.players[1].wins}</b>`
+        ? `<span>Best of ${state.bestOf}</span><b>First to ${state.need}</b>`
         : '<span>Single</span><b>game</b>';
       state.players.forEach((p, i) => {
         const side = q(`.fr-s${i}`);
         side.classList.toggle('fr-active', state.phase === 'play' && cur === i);
         side.classList.toggle('fr-away', !api.isAlive(p.pid));
-        side.querySelector('.fr-nm').textContent = i === me ? `${p.name} (you)` : p.name;
+        side.querySelector('.fr-nm').textContent = p.name;
+        side.classList.toggle('fr-me', i === me);
         side.querySelector('.fr-pips').innerHTML = pips(p) || `<small>${COLOR_NAME[i]}</small>`;
         side.querySelector('.fr-wins').textContent = state.bestOf > 1 ? p.wins : '';
       });
@@ -290,7 +290,6 @@ export default {
         if (dropped) {
           const cells = S.ROWS - next.last.row + RIM / CELL;
           wait = fallMs(cells);
-          dropUntil = Date.now() + wait;
         }
         // reset the aiming disc when my turn starts
         if (myTurn() && (!old || old.current !== next.current || !sameGame)) aim = next.last ? next.last.col : 3;
