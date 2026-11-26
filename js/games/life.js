@@ -103,7 +103,7 @@ export default {
     const el = h(`<div class="game life">
       <section class="scoreboard"></section>
       <section class="table">
-        <div class="turn-info"><div class="turn-label"></div><div class="turn-points">Cash <strong>$0k</strong></div></div>
+        <div class="turn-info"><div class="turn-label"></div><div class="turn-points"><span class="lp-tpl">Cash</span> <strong>$0k</strong></div></div>
         <div class="sel-line lp-status"></div>
         <div class="lp-stage">
           <div class="lp-viewport"><div class="lp-board" style="width:${BW}px;height:${BH}px"></div></div>
@@ -163,7 +163,7 @@ export default {
       </svg>
       ${L.BOARD.map((sp) => {
         const T = L.TYPES[sp.t];
-        const tag = sp.t === 'stop' ? L.STOPS[sp.stop].title.split(' ')[0].toUpperCase() : (sp.t === 'cash' && sp.pool === 'risk' ? 'GAMBLE' : T.tag);
+        const tag = sp.t === 'stop' ? L.STOPS[sp.stop].tag : (sp.t === 'cash' && sp.pool === 'risk' ? 'GAMBLE' : T.tag);
         const icon = sp.t === 'cash' && sp.pool === 'risk' ? '🎰' : sp.t === 'stop' && sp.stop === 'grad' ? '🎓' : T.icon;
         return `<div class="lp-tile t-${sp.t} ${sp.pool === 'risk' ? 'risk' : ''}" data-id="${sp.id}" style="left:${cx(sp.col) - TILE / 2}px;top:${cy(sp.row) - TILE / 2}px"><span class="lp-ic">${icon}</span><span class="lp-tg">${tag}</span></div>`;
       }).join('')}
@@ -317,16 +317,19 @@ export default {
       const mine = state.current === me;
       scoreboard(q('.scoreboard'), state.players.map((p, i) => ({
         name: p.name,
-        score: L.fmt(p.cash),
+        score: state.phase === 'over' ? L.fmt(L.netWorth(p)) : L.fmt(p.cash),
         active: i === state.current && state.phase !== 'over',
         me: i === me,
         away: !api.isAlive(p.pid),
-        sub: p.retired ? `🏖️ Retired #${p.rank} ${famText(p)}` : `${p.career ? `${p.career.icon} ${p.career.name}` : p.college ? '🎓 Student' : 'No job yet'} ${famText(p)}${p.house ? ' 🏠' : ''}${p.loans ? ` · ${p.loans}L` : ''}`,
+        sub: state.phase === 'over' ? (state.winners || []).includes(i) ? '🏆 Final worth' : 'Final worth'
+          : p.retired ? `🏖️ Retired #${p.rank} ${famText(p)}` : `${p.career ? `${p.career.icon} ${p.career.name}` : p.college ? '🎓 Student' : 'No job yet'} ${famText(p)}${p.house ? ' 🏠' : ''}${p.loans ? ` · ${p.loans}L` : ''}`,
       })));
       [...q('.scoreboard').children].forEach((c, i) => c.style.setProperty('--pc', COLORS[i % COLORS.length]));
 
       q('.turn-label').textContent = state.phase === 'over' ? 'Everyone has retired' : (mine ? 'Your turn' : `${cur.name}’s turn`);
-      q('.turn-points strong').textContent = L.fmt(cur.cash);
+      const over = state.phase === 'over';
+      q('.lp-tpl').textContent = over ? 'Top worth' : 'Cash';
+      q('.turn-points strong').textContent = over ? L.fmt(Math.max(...state.players.map(L.netWorth))) : L.fmt(cur.cash);
       const salary = cur.career ? `${cur.career.icon} ${cur.career.name} ${L.fmt(cur.career.salary)}` : cur.college ? '🎓 Student' : 'No job yet';
       q('.lp-status').textContent = state.phase === 'over' ? 'Final worth = cash + house + family − loans'
         : `${salary}${cur.loans ? ` · ${cur.loans} loan${cur.loans > 1 ? 's' : ''}` : ''}${cur.house ? ` · ${cur.house.icon} ${cur.house.name}` : ''}`;

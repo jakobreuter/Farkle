@@ -1,6 +1,6 @@
 # 🎲 Game Night
 
-Play games in the browser with friends: Farkle, Yacht, Draw, Lucky Streak, Property Rush and Secret Face. No sign-up, works on phones.
+Play games in the browser with friends: 11 games including Farkle, Yacht, Draw, Property Rush, Ludo and Life Path. No sign-up, works on phones.
 
 **Play:** https://jakobreuter.github.io/Farkle/
 
@@ -25,6 +25,11 @@ Play alone or fill a seat: the host can tap **🤖 Add computer player** in the 
   swipe and swap deals, and block with Shields. The first to 3 complete sets wins.
 - **Secret Face**: 2-player face-guessing game. Ask yes/no questions out loud (or pick from a list the app answers),
   flip faces down, and guess the other player's face. Choose cartoon characters or famous people.
+- **Symbol Snap**: real-time matching: every two cards share exactly one symbol; tap it first to win the card.
+- **Liar's Dice**: bluff about the dice under everyone's cups; call "Liar!" and lose dice until one player is left.
+- **Four in a Row**: drop discs, connect four; single game or best of 3/5.
+- **Ludo**: the classic race-home board game for 2–4 players.
+- **Life Path**: an original spin-and-move journey game: college or work, careers, family, houses, retirement.
 
 ## Fair randomness
 - Every die, card and word pick is exactly uniform. There is no weighting, no streak or "catch-up" logic, and every player is handled the same way.

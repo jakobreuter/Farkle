@@ -23,7 +23,7 @@ export const RETIRE_BONUS = [40 * K, 30 * K, 20 * K, 10 * K, 10 * K, 10 * K];
 
 export const SPIN_MS = 1100; // spinner animation
 export const HOP_MS = 260; // per space hopped
-export const SHOW_MS = 2300; // reading time for an event
+export const SHOW_MS = 2000; // reading time for an event
 export const CHOICE_SHOW_MS = 1500; // after a decision
 
 // ---------- cards ----------
@@ -189,11 +189,12 @@ export const ROWS = Math.max(...BOARD.map((s) => s.row)) + 1;
 export const RETIRE_ID = BOARD.find((s) => s.t === 'retire').id;
 
 export const STOPS = {
-  fork1: { title: 'Crossroads', text: 'College or straight to work?' },
-  grad: { title: 'Graduation day', text: 'Pick your first degree job.' },
-  fork2: { title: 'Fork in the road', text: 'Play it safe, or take a gamble?' },
-  rethink: { title: 'Midlife rethink', text: 'Change careers, or stay put?' },
+  fork1: { title: 'Crossroads', tag: 'CHOOSE', text: 'College or straight to work?' },
+  grad: { title: 'Graduation day', tag: 'GRAD', text: 'Pick your first degree job.' },
+  fork2: { title: 'Fork in the road', tag: 'CHOOSE', text: 'Play it safe, or take a gamble?' },
+  rethink: { title: 'Midlife rethink', tag: 'RETHINK', text: 'Change careers, or stay put?' },
 };
+const an = (w) => (/^[AEIOU]/i.test(w) ? 'an' : 'a');
 
 export const isStop = (sp) => sp.t === 'stop' || sp.t === 'retire';
 
@@ -455,8 +456,8 @@ function choose(s, i, rand, now) {
         setEvent(s, seat, p.career.icon, 'Staying put', `${p.name} keeps the ${p.career.name} job.`, 0);
       } else {
         p.career = { name: o.name, icon: o.icon, salary: o.salary };
-        setEvent(s, seat, o.icon, 'New job!', `${p.name} is now a ${o.name} earning ${fmt(o.salary)} per payday.`, 0);
-        addLog(s, `${o.icon} ${p.name} becomes a ${o.name} (${fmt(o.salary)}).`);
+        setEvent(s, seat, o.icon, 'New job!', `${p.name} is now ${an(o.name)} ${o.name} earning ${fmt(o.salary)} per payday.`, 0);
+        addLog(s, `${o.icon} ${p.name} becomes ${an(o.name)} ${o.name} (${fmt(o.salary)}).`);
       }
       return show(s, now, CHOICE_SHOW_MS);
     }

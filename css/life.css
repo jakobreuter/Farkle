@@ -74,7 +74,7 @@
 .life .lp-pop {
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
-  width: min(270px, 88%);
+  width: min(256px, 86%);
   background: var(--card); color: var(--ink);
   border-radius: 16px; border: 3px solid var(--accent);
   box-shadow: 0 14px 34px rgba(0,0,0,.5);
@@ -83,11 +83,11 @@
 }
 .life .lp-pop.in { animation: lpPop .38s cubic-bezier(.2,1.5,.4,1); }
 @keyframes lpPop { from { transform: translate(-50%, -50%) scale(.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-.life .lp-pop-ic { font-size: 2rem; line-height: 1.2; }
-.life .lp-pop-t { font-weight: 900; font-size: 1.1rem; }
+.life .lp-pop-ic { font-size: 1.7rem; line-height: 1.2; }
+.life .lp-pop-t { font-weight: 900; font-size: 1.05rem; }
 .life .lp-pop-who { font-weight: 800; font-size: .8rem; text-shadow: 0 0 1px rgba(0,0,0,.4); }
-.life .lp-pop-x { font-size: .88rem; line-height: 1.3; margin-top: 4px; }
-.life .lp-pop-d { font-size: 1.4rem; font-weight: 900; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.life .lp-pop-x { font-size: .84rem; line-height: 1.3; margin-top: 4px; }
+.life .lp-pop-d { font-size: 1.25rem; font-weight: 900; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .life .lp-pop-d.up { color: #23893a; }
 .life .lp-pop-d.down { color: var(--danger); }
 
@@ -148,7 +148,7 @@
   .life .player .pscore { font-size: 1.15rem; margin: 0; }
   .life .player .pname { font-size: .82rem; }
   .life .player .psub { font-size: .7rem; }
-  .life .lp-viewport { height: 290px; }
+  .life .lp-viewport { height: 250px; height: clamp(230px, calc(100dvh - 415px), 340px); }
   .life .lp-dock { height: 80px; gap: 14px; }
   .life .lp-wheel { width: 70px; height: 70px; }
   .life .lp-spin { flex: 0 1 170px; }
