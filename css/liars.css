@@ -1,0 +1,135 @@
+/* ---------- Liar's Dice (every selector is scoped to .liars) ---------- */
+.liars .lz-table { gap: 10px; }
+
+/* opponents' cups */
+.liars .lz-seats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.liars .lz-seats[data-n="1"] { grid-template-columns: minmax(0, 1fr); }
+.liars .lz-seats[data-n="2"], .liars .lz-seats[data-n="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.liars .lz-seat {
+  height: 66px; min-width: 0;
+  background: rgba(0, 0, 0, .18);
+  border: 2px solid transparent; border-radius: 12px;
+  padding: 5px 8px;
+  display: flex; flex-direction: column; gap: 3px;
+  transition: border-color .5s, background .5s, opacity .5s;
+}
+.liars .lz-seat.active { border-color: var(--accent); background: rgba(226, 167, 46, .16); box-shadow: 0 0 16px rgba(226, 167, 46, .25); }
+.liars .lz-seat.loser { border-color: var(--danger); background: rgba(217, 65, 65, .2); }
+.liars .lz-seat.out { opacity: .45; }
+.liars .lz-seat.away .nm::after { content: " (away)"; font-weight: 500; opacity: .7; }
+.liars .lz-sname { display: flex; justify-content: space-between; gap: 6px; font-size: .85rem; font-weight: 700; white-space: nowrap; line-height: 1.2; }
+.liars .lz-sname .nm { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.liars .lz-n { font-size: .72rem; font-weight: 600; opacity: .8; flex: none; }
+.liars .lz-under { flex: 1; display: flex; align-items: center; gap: 3px; min-height: 0; flex-wrap: nowrap; overflow: hidden; }
+.liars .lz-cupsvg { width: 34px; height: 30px; flex: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35)); }
+.liars .lz-dots { display: flex; flex-wrap: wrap; gap: 3px; max-width: 60px; }
+.liars .lz-dots b { width: 8px; height: 8px; border-radius: 2px; background: var(--die); box-shadow: inset 0 -1px 0 var(--die-edge); }
+.liars .lz-gone { font-size: .75rem; opacity: .75; font-style: italic; }
+
+/* flat mini dice */
+.liars .lz-flat {
+  --w: 16px;
+  width: var(--w); height: var(--w); flex: none;
+  display: inline-grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  padding: calc(var(--w) * .14);
+  background: radial-gradient(circle at 35% 30%, #fff, var(--die) 60%, var(--die-edge));
+  border-radius: 20%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+  vertical-align: middle;
+}
+.liars .lz-flat i { border-radius: 50%; margin: auto; width: 80%; height: 80%; }
+.liars .lz-flat i.on { background: var(--pip); }
+.liars .lz-flat.v1 i.on { background: var(--pip-one); width: 100%; height: 100%; }
+.liars .lz-under .lz-flat { animation: lzFlip .45s cubic-bezier(.2, 1.4, .4, 1) var(--d, 0ms) both; }
+.liars .lz-under .lz-flat.match { box-shadow: 0 0 0 2px var(--accent), 0 0 8px var(--accent); }
+.liars .lz-under .lz-flat.miss { opacity: .45; }
+@keyframes lzFlip { from { transform: translateY(-10px) scale(.4) rotate(-30deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* current bid / result box: fixed height so nothing below moves */
+.liars .lz-bidbox {
+  height: 66px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, .22);
+  border: 1.5px solid rgba(255, 255, 255, .14);
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 0 12px; overflow: hidden;
+}
+.liars .lz-none { opacity: .85; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.liars .lz-cur { display: flex; align-items: center; gap: 6px; flex: none; }
+.liars .lz-cq { font-size: 2.3rem; font-weight: 900; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0, 0, 0, .3); }
+.liars .lz-x { font-size: 1.3rem; font-weight: 700; opacity: .8; }
+.liars .lz-flat.big { --w: 38px; border-radius: 18%; }
+.liars .lz-by { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.liars .lz-by > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.liars .lz-by .muted-l { font-size: .7rem; text-transform: uppercase; letter-spacing: 1px; opacity: .7; }
+.liars .lz-by b { font-size: 1rem; }
+.liars .lz-by span:last-child { font-size: .85rem; opacity: .85; }
+.liars .lz-bidbox.result { flex-direction: column; gap: 2px; animation: lzGlow .6s ease; }
+.liars .lz-bidbox.result.good { border-color: var(--accent); background: rgba(226, 167, 46, .18); }
+.liars .lz-bidbox.result.bad { border-color: #ff8a3d; background: rgba(255, 122, 26, .2); }
+.liars .lz-rtop { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.liars .lz-rcount { font-size: 1.6rem; font-weight: 900; color: var(--accent); line-height: 1; }
+.liars .lz-rtop .lz-flat { --w: 22px; }
+.liars .lz-rvs { font-size: .85rem; opacity: .9; }
+.liars .lz-rmsg { font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+@keyframes lzGlow { from { transform: scale(.94); opacity: .4; } to { transform: none; opacity: 1; } }
+
+/* my dice */
+.liars .lz-mine { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.liars .lz-mine.hidden { display: none; }
+.liars .lz-minelabel { font-size: .72rem; letter-spacing: 1px; text-transform: uppercase; opacity: .7; height: 1.2em; line-height: 1.2em; white-space: nowrap; }
+.liars .lz-tray { height: 62px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.liars .lz-tray .die { --s: 42px; }
+.liars .lz-tray .die.lz-off { visibility: hidden; width: 0; margin: 0 -6px; }
+.liars .lz-tray .die.lz-match::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 11px;
+  border: 3px solid var(--accent); box-shadow: 0 0 14px var(--accent); pointer-events: none;
+}
+.liars .lz-tray .die.lz-miss { opacity: .5; }
+.liars .lz-tray .die.lz-lost { animation: lzLose 1s ease 1.6s both; }
+@keyframes lzLose { to { opacity: .15; transform: translateY(8px) scale(.8); } }
+
+/* bid picker */
+.liars .lz-pick { transition: opacity .3s; }
+.liars .lz-pick.off, .liars .lz-step.off { opacity: .45; }
+.liars .lz-controls { align-items: stretch; }
+.liars .lz-controls .btn.big { min-width: 0; flex: 1; max-width: 170px; }
+.liars .lz-pick.hidden, .liars .controls.hidden { display: none; }
+.liars .lz-step { flex: none; transition: opacity .3s; display: flex; align-items: center; gap: 4px; background: rgba(0, 0, 0, .2); border-radius: 12px; padding: 3px; }
+.liars .lz-stepbtn { width: 38px; height: 40px; padding: 0; font-size: 1.4rem; line-height: 1; border-radius: 10px; }
+.liars .lz-qty { width: 48px; text-align: center; line-height: 1.05; display: flex; flex-direction: column; }
+.liars .lz-qty b { font-size: 1.35rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.liars .lz-qty span { font-size: .68rem; opacity: .8; white-space: nowrap; }
+.liars .lz-faces { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; max-width: 420px; margin: 0 auto; }
+.liars .lz-facebtn {
+  height: 46px; min-width: 0; padding: 0;
+  border-radius: 10px; border: 2px solid transparent;
+  background: rgba(0, 0, 0, .2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .2s, background .2s, transform .1s;
+}
+.liars .lz-facebtn .lz-flat { --w: 28px; }
+.liars .lz-facebtn.on { border-color: var(--accent); background: rgba(226, 167, 46, .28); box-shadow: 0 0 10px rgba(226, 167, 46, .4); }
+.liars .lz-facebtn:active:not(:disabled) { transform: scale(.94); }
+.liars .lz-facebtn:disabled { cursor: not-allowed; }
+.liars .lz-facebtn:disabled .lz-flat { opacity: .35; }
+.liars .lz-facebtn.wildx { position: relative; }
+.liars .lz-facebtn.wildx::after { content: "wild"; position: absolute; bottom: 1px; left: 0; right: 0; font-size: .55rem; font-weight: 800; color: var(--accent); letter-spacing: .5px; text-transform: uppercase; }
+.liars .lz-facebtn.wildx .lz-flat { transform: translateY(-4px); --w: 24px; }
+
+.liars .lz-liarbtn { background: var(--danger); color: #fff; }
+.liars .controls .btn.big { white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .liars .lz-table { gap: 8px; }
+  .liars .lz-seat { height: 62px; padding: 4px 6px; }
+  .liars .lz-under .lz-flat { --w: 15px; }
+  .liars .lz-under { gap: 2px; }
+  .liars .lz-tray { height: 56px; gap: 10px; }
+  .liars .lz-tray .die { --s: 38px; }
+  .liars .lz-stepbtn { width: 36px; }
+  .liars .lz-qty { width: 42px; }
+  .liars .lz-facebtn { height: 44px; }
+  .liars .lz-cq { font-size: 2rem; }
+  .liars .lz-flat.big { --w: 32px; }
+}
