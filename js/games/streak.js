@@ -52,6 +52,22 @@ export default {
     return (s.phase === 'bust' || s.phase === 'streak') && now >= s.autoAt ? { type: 'next' } : null;
   },
 
+  botDelay: 1200,
+  bot(s, seat) {
+    if (s.current !== seat || s.phase !== 'turn') return null;
+    if (!s.row.length) return { type: 'flip' };
+    // chance the next card busts us, given what's left in the draw pile
+    const pile = s.deck.length ? s.deck : s.discard;
+    const inRow = new Set(s.row.filter((c) => c !== S.STAR));
+    const risky = pile.filter((c) => inRow.has(c)).length / Math.max(1, pile.length);
+    const total = S.rowTotal(s.row);
+    const need = s.target - s.players[seat].score;
+    if (total >= need) return { type: 'stop' };
+    if (S.distinctNumbers(s.row) === S.STREAK_SIZE - 1 && risky < 0.6) return { type: 'flip' }; // go for the bonus
+    if (risky > 0.38 || total >= 30) return { type: 'stop' };
+    return { type: 'flip' };
+  },
+
   results(s) {
     return {
       over: s.phase === 'over',

@@ -78,13 +78,21 @@ export function createSession({ code, me, name, create, ui }) {
     changed(prev);
   }
 
+  let lastChangeAt = 0;
   function hostUpdate(fn) {
     if (!isHost()) return;
     const next = structuredClone(sess);
     fn(next);
     next.seq++;
+    lastChangeAt = Date.now();
     setSess(next);
   }
+
+  // Computer players live in the member list with ids starting "bot-". They're
+  // always "present", never become host, and the host's browser plays their moves.
+  const isBot = (pid) => typeof pid === 'string' && pid.startsWith('bot-');
+  const alive = (pid) => isBot(pid) || relay.isAlive(pid);
+  const BOT_NAMES = ['Robo', 'Chip', 'Pixel', 'Bolt', 'Sprocket', 'Widget', 'Byte'];
 
   // ---------- receiving ----------
   function newer(a, b) {
@@ -288,12 +296,28 @@ export function createSession({ code, me, name, create, ui }) {
     if (a) enqueue(a, -1);
   }
 
+  // let computer players move, one action at a time, at a watchable pace
+  function botTick() {
+    if (!isHost() || busy || !sess.game) return;
+    const plugin = GAMES[sess.game.id];
+    if (!plugin.bot || Date.now() - lastChangeAt < (plugin.botDelay ?? 1100)) return;
+    const st = sess.game.state;
+    for (let seat = 0; seat < st.players.length; seat++) {
+      if (!isBot(st.players[seat].pid)) continue;
+      let a = null;
+      try { a = plugin.bot(st, seat); } catch (e) { console.warn('bot', e); }
+      if (a) { lastChangeAt = Date.now(); enqueue(a, seat); return; }
+    }
+  }
+  setInterval(botTick, 300);
+
   // ---------- public API ----------
   return {
     me,
     get state() { return sess; },
     isHost,
-    isAlive: (pid) => relay.isAlive(pid),
+    isAlive: alive,
+    isBot,
     hostNow: () => Date.now() + clockOffset,
     nameOf,
 
@@ -317,7 +341,8 @@ export function createSession({ code, me, name, create, ui }) {
     startGame() {
       if (!isHost()) return;
       const plugin = GAMES[sess.lobby.game];
-      const players = sess.members.filter((x) => relay.isAlive(x.pid));
+      const players = sess.members.filter((x) => alive(x.pid));
+      if (!plugin.bot && players.some((x) => isBot(x.pid))) return ui.onToast?.(`${plugin.name} can’t be played with computer players.`);
       if (players.length < plugin.minPlayers) return ui.onToast?.(`${plugin.name} needs at least ${plugin.minPlayers} players.`);
       if (players.length > plugin.maxPlayers) return ui.onToast?.(`${plugin.name} allows up to ${plugin.maxPlayers} players.`);
       const opts = {};
@@ -330,6 +355,12 @@ export function createSession({ code, me, name, create, ui }) {
       });
     },
     endGame() { hostUpdate((s) => { s.game = null; }); },
+    addBot() {
+      if (!isHost()) return;
+      const used = new Set(sess.members.map((m) => m.name));
+      const name = BOT_NAMES.find((n) => !used.has(n)) || `Bot ${sess.members.length}`;
+      hostUpdate((s) => s.members.push({ pid: `bot-${randomHex(4)}`, name, bot: true }));
+    },
     kick(pid) {
       if (pid === me) return;
       hostUpdate((s) => { s.members = s.members.filter((x) => x.pid !== pid); });

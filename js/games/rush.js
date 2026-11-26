@@ -97,6 +97,66 @@ export default {
 
   tick(s, { now }) { return R.tick(s, now); },
 
+  botDelay: 1300,
+  bot(s, seat) {
+    const me = s.players[seat];
+    const others = s.players.map((_, i) => i).filter((i) => i !== seat);
+    const shieldId = me.hand.find((id) => R.card(id).action === 'shield');
+    if (s.phase === 'respond') {
+      const pd = s.pending;
+      if (!pd.targets.includes(seat) || pd.done[seat]) return null;
+      const big = pd.kind === 'takeover' || pd.kind === 'swipe' || (pd.kind === 'pay' && pd.amounts[seat] >= 4);
+      if (shieldId != null && big) return { type: 'respond', r: { type: 'shield' } };
+      return { type: 'respond', r: { type: pd.kind === 'pay' ? 'auto' : 'accept' } };
+    }
+    if (s.current !== seat) return null;
+    if (s.phase === 'discard') {
+      const need = me.hand.length - R.HAND_MAX;
+      const order = [...me.hand].sort((a, b) => (R.card(a).type === 'prop') - (R.card(b).type === 'prop') || R.valueOf(a) - R.valueOf(b));
+      return { type: 'discard', cards: order.slice(0, need) };
+    }
+    if (s.phase !== 'play') return null;
+    if (s.plays < 1) return { type: 'end' };
+    const hand = me.hand.map((id) => ({ id, c: R.card(id) }));
+    const find = (f) => hand.find(({ c }) => f(c));
+    // 1. properties
+    const prop = find((c) => c.type === 'prop' && !R.isComplete(me, c.district));
+    if (prop) return { type: 'place', card: prop.id };
+    const wild = find((c) => c.type === 'wild');
+    if (wild) {
+      const ds = R.DISTRICT_IDS.filter((d) => !R.isComplete(me, d)).sort((a, b) => (R.DISTRICTS[a].size - R.count(me, a)) - (R.DISTRICTS[b].size - R.count(me, b)));
+      if (ds.length) return { type: 'place', card: wild.id, district: ds[0] };
+    }
+    // 2. actions
+    const act = (a) => find((c) => c.action === a);
+    const rich = [...others].sort((a, b) => R.assetValue(s.players[b]) - R.assetValue(s.players[a]));
+    if (act('takeover')) {
+      for (const i of others) for (const d of R.DISTRICT_IDS) if (R.isComplete(s.players[i], d)) return { type: 'play', card: act('takeover').id, target: i, district: d };
+    }
+    if (act('swipe')) {
+      let pick = null;
+      for (const i of others) for (const pid of R.loose(s.players[i])) {
+        const d = R.districtOf(s.players[i], pid);
+        const helps = R.count(me, d);
+        if (!pick || helps > pick.helps) pick = { i, pid, helps };
+      }
+      if (pick) return { type: 'play', card: act('swipe').id, target: pick.i, take: pick.pid };
+    }
+    if (act('rentday')) {
+      const ds = R.DISTRICT_IDS.filter((d) => R.count(me, d)).sort((a, b) => R.rentFor(me, b) - R.rentFor(me, a));
+      if (ds.length && R.rentFor(me, ds[0]) >= 2 && others.some((i) => R.assetValue(s.players[i]) > 0)) return { type: 'play', card: act('rentday').id, district: ds[0] };
+    }
+    if (act('tax') && R.assetValue(s.players[rich[0]]) > 0) return { type: 'play', card: act('tax').id, target: rich[0] };
+    if (act('party') && others.some((i) => R.assetValue(s.players[i]) > 0)) return { type: 'play', card: act('party').id };
+    if (act('windfall') && s.deck.length >= 2) return { type: 'play', card: act('windfall').id };
+    // 3. bank money, then spare actions (keep Shields)
+    const money = hand.filter(({ c }) => c.type === 'money').sort((a, b) => b.c.value - a.c.value)[0];
+    if (money) return { type: 'bank', card: money.id };
+    const spare = hand.find(({ c }) => c.type === 'action' && c.action !== 'shield');
+    if (spare && R.bankTotal(me) < 8) return { type: 'bank', card: spare.id };
+    return { type: 'end' };
+  },
+
   results(s) {
     return {
       over: s.phase === 'over',

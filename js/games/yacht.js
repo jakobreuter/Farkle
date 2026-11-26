@@ -41,6 +41,41 @@ export default {
     throw new Error('unknown action');
   },
 
+  botDelay: 1900,
+  bot(s, seat) {
+    if (s.current !== seat || s.phase !== 'play') return null;
+    if (s.rollsLeft === 3) return { type: 'roll' };
+    const p = s.players[seat];
+    const open = Y.CATS.filter((k) => p.card[k] == null);
+    const pts = (k) => Y.scoreFor(k, s.dice);
+    // take a big score straight away
+    const great = open.find((k) => (k === 'yacht' || k === 'large' || k === 'full' || k === 'small') && pts(k) > 0);
+    if (s.rollsLeft > 0 && !great) {
+      // hold the most common face (higher face on a tie), reroll the rest
+      const cnt = [0, 0, 0, 0, 0, 0, 0];
+      s.dice.forEach((v) => cnt[v]++);
+      let target = 6;
+      for (let f = 6; f >= 1; f--) if (cnt[f] > cnt[target]) target = f;
+      const want = s.dice.map((v) => v === target);
+      const i = want.findIndex((w, k) => w !== s.held[k]);
+      if (i >= 0) return { type: 'hold', index: i };
+      if (!want.every(Boolean)) return { type: 'roll' };
+    }
+    // score: best points, weighting upper boxes for the bonus; sacrifice cheap boxes for zeros
+    const weight = (k) => {
+      const ui = Y.UPPER.indexOf(k);
+      const v = pts(k);
+      if (ui >= 0) return v + (v >= (ui + 1) * 3 ? 8 : 0);
+      if (k === 'chance') return v - 12; // keep Chance for later
+      return v;
+    };
+    const order = ['ones', 'yacht', 'twos', 'four', 'large', 'threes', 'small', 'full', 'three', 'fours', 'fives', 'sixes', 'chance'];
+    let best = open[0];
+    for (const k of open) if (weight(k) > weight(best)) best = k;
+    if (pts(best) === 0) best = order.find((k) => open.includes(k)) || best;
+    return { type: 'score', cat: best };
+  },
+
   results(s) {
     return {
       over: s.phase === 'over',

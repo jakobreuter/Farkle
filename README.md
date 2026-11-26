@@ -15,6 +15,8 @@ and is told so. The original host can come back and rejoins as a regular player.
 can still finish their turns; the game simply waits when it's the away player's turn.
 
 ## Games
+Play alone or fill a seat: the host can tap **🤖 Add computer player** in the lobby (every game except Draw).
+
 - **Farkle**: six dice, push your luck. Set aside scoring dice; first bank needs 500.
 - **Yacht**: the classic public-domain five-dice category game (13 boxes, upper bonus at 63).
 - **Draw**: one player sketches a word, everyone else guesses.

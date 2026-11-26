@@ -55,6 +55,36 @@ export default {
     return s.phase === 'farkle' && s.autoAt && now >= s.autoAt ? { type: 'pass' } : null;
   },
 
+  botDelay: 1900, // let the dice land before the computer reacts
+  bot(s, seat) {
+    if (s.current !== seat) return null;
+    if (s.phase === 'start') return { type: 'roll' };
+    if (s.phase !== 'select') return null;
+    const free = F.freeIndices(s);
+    if (!s.asideThisRoll || s.selected.length) {
+      // keep the best-scoring dice (fewest dice on a tie, so more are left to roll)
+      let best = [];
+      let bestPts = -Infinity;
+      for (let mask = 1; mask < 1 << free.length; mask++) {
+        const idx = free.filter((_, k) => mask & (1 << k));
+        const pts = F.scoreDice(idx.map((i) => s.dice[i].value));
+        const allDice = idx.length === free.length; // hot dice is worth a lot
+        const score = pts + (allDice ? 400 : 0) - idx.length * 40;
+        if (pts > 0 && score > bestPts) { bestPts = score; best = idx; }
+      }
+      const missing = best.find((i) => !s.selected.includes(i));
+      if (missing != null) return { type: 'toggle', index: missing };
+      const extra = s.selected.find((i) => !best.includes(i));
+      if (extra != null) return { type: 'toggle', index: extra };
+      return { type: 'setAside' };
+    }
+    const left = free.length || 6;
+    const pts = s.turnPoints;
+    const behind = s.finalRound && Math.max(...s.players.map((p) => p.score)) >= s.players[seat].score + pts;
+    if (F.canBank(s) && !behind && (pts >= 1000 || (left <= 2 && pts >= 300) || (left === 3 && pts >= 400) || (left <= 5 && pts >= 650))) return { type: 'bank' };
+    return { type: 'roll' };
+  },
+
   results(s) {
     return {
       over: s.phase === 'over',

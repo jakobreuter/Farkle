@@ -71,6 +71,34 @@ export default {
     return S.applyAction(s, a, seat, rand);
   },
   tick(s) { return s.phase === 'deal' ? { type: 'deal' } : null; },
+  botDelay: 1500,
+  bot(s, seat) {
+    if (s.phase !== 'play') return null;
+    const me = s.players[seat];
+    const up = () => me.down.map((d, i) => (d ? -1 : i)).filter((i) => i >= 0);
+    // tidy the board after an answer
+    if (me.lastQ) {
+      const q = S.Q[me.lastQ.q];
+      if (up().some((i) => q.test(S.CHARACTERS[i]) !== me.lastQ.yes)) return { type: 'autoflip' };
+    }
+    if (s.current !== seat) return null;
+    const left = up();
+    if (left.length === 1) return { type: 'guess', index: left[0] };
+    // ask the question that splits the remaining faces most evenly
+    const asked = new Set(s.asks.filter((a) => a.seat === seat).map((a) => a.q));
+    let best = null;
+    let bestGap = Infinity;
+    for (const q of S.QUESTIONS) {
+      if (asked.has(q.id)) continue;
+      const yes = left.filter((i) => q.test(S.CHARACTERS[i])).length;
+      if (!yes || yes === left.length) continue;
+      const gap = Math.abs(left.length - 2 * yes);
+      if (gap < bestGap) { bestGap = gap; best = q; }
+    }
+    if (!best) return { type: 'guess', index: left[0] };
+    return { type: 'ask', q: best.id };
+  },
+
   results(s) {
     return {
       over: s.phase === 'over',

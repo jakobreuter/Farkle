@@ -93,8 +93,9 @@ function renderLobby() {
   const host = session.isHost();
   $('#members').innerHTML = s.members.map((m) => {
     const alive = session.isAlive(m.pid);
-    const tags = [m.pid === s.host ? '👑 host' : '', m.pid === me ? 'you' : '', alive ? '' : 'away'].filter(Boolean).join(' · ');
-    const kick = host && !alive && m.pid !== me ? `<button class="btn ghost small kick" data-kick="${m.pid}">Remove</button>` : '';
+    const bot = session.isBot(m.pid);
+    const tags = [m.pid === s.host ? '👑 host' : '', m.pid === me ? 'you' : '', bot ? '🤖 computer' : '', alive ? '' : 'away'].filter(Boolean).join(' · ');
+    const kick = host && (bot || !alive) && m.pid !== me ? `<button class="btn ghost small kick" data-kick="${m.pid}">Remove</button>` : '';
     return `<li class="${alive ? '' : 'away'}"><span class="dot"></span><span class="who">${esc(m.name)}</span><span class="tag">${tags}</span>${kick}</li>`;
   }).join('');
 
@@ -121,8 +122,10 @@ function renderLobby() {
   if (!host) note = `Waiting for ${session.nameOf(s.host)} to start a game…`;
   else if (online < sel.minPlayers) note = `${sel.name} needs at least ${sel.minPlayers} players — invite a friend!`;
   else if (online > sel.maxPlayers) note = `${sel.name} allows up to ${sel.maxPlayers} players.`;
-  else if (online === 1) note = 'You can play solo, or invite friends first.';
-  start.disabled = !host || online < sel.minPlayers || online > sel.maxPlayers;
+  else if (!sel.bot && s.members.some((m) => session.isBot(m.pid))) note = `${sel.name} needs real players — remove the computer players to play it.`;
+  else if (online === 1) note = 'Invite friends, or add a computer player to play against.';
+  start.disabled = !host || online < sel.minPlayers || online > sel.maxPlayers || (!sel.bot && s.members.some((m) => session.isBot(m.pid)));
+  $('#bot-btn').classList.toggle('hidden', !host);
   $('#start-note').textContent = note;
 }
 
@@ -256,6 +259,7 @@ $('#members').addEventListener('click', (e) => {
   if (b && session?.isHost()) session.kick(b.dataset.kick);
 });
 $('#start-btn').addEventListener('click', () => session?.startGame());
+$('#bot-btn').addEventListener('click', () => session?.addBot());
 
 const canShare = !!navigator.share && matchMedia('(pointer: coarse)').matches;
 if (canShare) $('#share-btn').textContent = 'Share invite link';
