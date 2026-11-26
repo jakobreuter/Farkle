@@ -29,7 +29,7 @@ function playOut(g, nPlayers, maxSteps = 20000) {
     if (sys) { apply(sys, -1); continue; }
     let moved = false;
     for (let seat = 0; seat < nPlayers && !moved; seat++) {
-      const a = g.bot(s, seat);
+      const a = g.bot(s, seat, { now });
       if (!a) continue;
       try { apply(a, seat); } catch (e) { throw new Error(`${g.id}: bot ${seat} chose an illegal move ${JSON.stringify(a)} — ${e.message}`); }
       moved = true;

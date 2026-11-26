@@ -305,7 +305,7 @@ export function createSession({ code, me, name, create, ui }) {
     for (let seat = 0; seat < st.players.length; seat++) {
       if (!isBot(st.players[seat].pid)) continue;
       let a = null;
-      try { a = plugin.bot(st, seat); } catch (e) { console.warn('bot', e); }
+      try { a = plugin.bot(st, seat, { now: Date.now() }); } catch (e) { console.warn('bot', e); }
       if (a) { lastChangeAt = Date.now(); enqueue(a, seat); return; }
     }
   }
