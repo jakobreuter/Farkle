@@ -371,7 +371,7 @@ export default {
           turnPill(q('.turn-banner'), 'Your turn', next.round !== old.round ? ROLL_MS : 200);
         }
         if (old && old.phase !== 'over' && next.phase === 'over') {
-          banner(q('.banner'), next.winner === seat ? 'YOU WIN!' : `${next.players[next.winner].name.toUpperCase()} WINS`, 'hot', 2600);
+          banner(q('.banner'), next.winner === seat ? 'YOU WIN!' : 'GAME OVER', 'hot', 2600);
         }
       },
       refresh: render,
