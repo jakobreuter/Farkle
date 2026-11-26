@@ -760,3 +760,39 @@ body.invited #join-card { border: 3px solid var(--accent); }
 .hand { align-items: stretch; }
 .sheet .btn.ghost { color: var(--ink); border-color: #cfc6b0; }
 @media (max-width: 600px) { .rc { min-height: 150px; } .rc.mini { min-height: 122px; } }
+/* Secret Face: equal columns, two-line names, show your secret's name on phones */
+.board { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.board .fcard span { font-size: .66rem; line-height: 1.1; height: 2.2em; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; width: 100%; overflow-wrap: anywhere; }
+.mine-face { flex-direction: column; gap: 2px; align-items: center; max-width: 76px; }
+.mine-face > div:last-child { display: block !important; text-align: center; font-size: .7rem; line-height: 1.1; }
+.mine-face .small { display: none; }
+@media (max-width: 600px) { .board .fcard span { font-size: .56rem; } }
+.board .fcard span { overflow-wrap: normal; }
+.board .fcard span.longname { font-size: .52rem; letter-spacing: -.2px; }
+@media (max-width: 600px) { .board .fcard span.longname { font-size: .48rem; } }
+.board .fcard span.longname { letter-spacing: -.4px; }
+@media (max-width: 600px) { .board .fcard span.longname { font-size: .44rem; } }
+
+/* ---------- Property Rush: each card type has its own look ---------- */
+/* Money: solid green all around, big number in a circle */
+.rc.money { background: linear-gradient(160deg, #40c057, #2b8a3e 70%); border: 3px solid #1e6b2e; color: #fff; }
+.rc.money .rc-head { background: transparent; min-height: 30px; font-size: .78rem; letter-spacing: 2px; }
+.rc.money .rc-body { align-items: center; justify-content: center; }
+.rc.money .rc-big {
+  color: #fff; width: 66px; height: 66px; border-radius: 50%; border: 3px solid rgba(255,255,255,.75);
+  display: grid; place-items: center; font-size: 2.3rem; margin: 0 auto; text-shadow: 0 2px 2px rgba(0,0,0,.25);
+  background: rgba(0,0,0,.08);
+}
+.rc.money .rc-foot { background: rgba(0,0,0,.2); color: #fff; border-top: 0; }
+.rc.mini.money .rc-big { width: 52px; height: 52px; font-size: 1.8rem; }
+/* Action: dark navy with a gold frame */
+.rc.action { background: radial-gradient(circle at 50% 35%, #3b4260, #23273a 75%); border: 3px solid var(--accent); color: #fff; }
+.rc.action .rc-head { background: transparent; color: var(--accent); border-bottom: 1px solid rgba(226,167,46,.45); text-shadow: none; }
+.rc.action .rc-icon { width: 48px; height: 48px; margin: 2px auto 2px; border-radius: 50%; background: rgba(255,255,255,.1); display: grid; place-items: center; font-size: 1.7rem; }
+.rc.action .rc-short { color: #fff; }
+.rc.action .rc-foot { background: rgba(0,0,0,.3); color: var(--accent); border-top: 0; }
+.rc.mini.action .rc-icon { width: 38px; height: 38px; font-size: 1.3rem; }
+/* Properties stay white with a colored bar; Wilds get a rainbow frame */
+.rc.prop { border: 2px solid #d9d2c0; }
+.rc.wild { border: 3px solid transparent; background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #c2255c, #ea8a0c, #3f9a3f, #1c4e80, #7b2fb0) border-box; }
+.rc.sel { border-color: var(--danger) !important; box-shadow: 0 0 0 3px var(--danger); }

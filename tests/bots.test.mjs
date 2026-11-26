@@ -10,6 +10,12 @@ function playOut(g, nPlayers, maxSteps = 20000) {
   const players = Array.from({ length: nPlayers }, (_, i) => ({ pid: `bot-${i}`, name: `Bot${i}` }));
   const opts = {};
   for (const o of g.options || []) opts[o.key] = o.default;
+  // pick settings computer players can handle (e.g. Secret Face needs list questions)
+  for (const o of g.options || []) {
+    if (!g.botOk || g.botOk(opts)) break;
+    for (const [v] of o.choices) { opts[o.key] = v; if (g.botOk(opts)) break; }
+  }
+  if (g.id === 'faces' && Math.random() < 0.5) opts.deck = 'famous';
   let s = g.setup(players, opts, { now: 0, first: 0 });
   let now = 0;
   const apply = (a, seat) => {

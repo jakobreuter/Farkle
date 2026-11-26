@@ -122,9 +122,12 @@ function renderLobby() {
   if (!host) note = `Waiting for ${session.nameOf(s.host)} to start a game…`;
   else if (online < sel.minPlayers) note = `${sel.name} needs at least ${sel.minPlayers} players — invite a friend!`;
   else if (online > sel.maxPlayers) note = `${sel.name} allows up to ${sel.maxPlayers} players.`;
-  else if (!sel.bot && s.members.some((m) => session.isBot(m.pid))) note = `${sel.name} needs real players — remove the computer players to play it.`;
-  else if (online === 1) note = 'Invite friends, or add a computer player to play against.';
-  start.disabled = !host || online < sel.minPlayers || online > sel.maxPlayers || (!sel.bot && s.members.some((m) => session.isBot(m.pid)));
+  const selOpts = {};
+  for (const o of sel.options || []) selOpts[o.key] = s.lobby.opts[`${sel.id}.${o.key}`] ?? o.default;
+  const botsBlocked = s.members.some((m) => session.isBot(m.pid)) && (!sel.bot || sel.botOk?.(selOpts) === false);
+  if (host && botsBlocked && note === '') note = sel.bot ? sel.botNote : `${sel.name} needs real players — remove the computer players to play it.`;
+  else if (host && online === 1 && note === '') note = 'Invite friends, or add a computer player to play against.';
+  start.disabled = !host || online < sel.minPlayers || online > sel.maxPlayers || botsBlocked;
   $('#bot-btn').classList.toggle('hidden', !host);
   $('#start-note').textContent = note;
 }

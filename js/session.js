@@ -342,11 +342,13 @@ export function createSession({ code, me, name, create, ui }) {
       if (!isHost()) return;
       const plugin = GAMES[sess.lobby.game];
       const players = sess.members.filter((x) => alive(x.pid));
-      if (!plugin.bot && players.some((x) => isBot(x.pid))) return ui.onToast?.(`${plugin.name} can’t be played with computer players.`);
       if (players.length < plugin.minPlayers) return ui.onToast?.(`${plugin.name} needs at least ${plugin.minPlayers} players.`);
       if (players.length > plugin.maxPlayers) return ui.onToast?.(`${plugin.name} allows up to ${plugin.maxPlayers} players.`);
       const opts = {};
       for (const o of plugin.options || []) opts[o.key] = sess.lobby.opts[`${plugin.id}.${o.key}`] ?? o.default;
+      if (players.some((x) => isBot(x.pid)) && (!plugin.bot || plugin.botOk?.(opts) === false)) {
+        return ui.onToast?.(plugin.botNote || `${plugin.name} can’t be played with computer players.`);
+      }
       const no = (sess.gameNo || 0) + 1;
       const state = plugin.setup(players.map((p) => ({ pid: p.pid, name: p.name })), opts, { now: Date.now(), first: (no - 1) % players.length });
       hostUpdate((s) => {

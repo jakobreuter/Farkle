@@ -4,18 +4,29 @@ import * as S from '../js/engines/faces.js';
 
 const P = [{ pid: 'a', name: 'A' }, { pid: 'b', name: 'B' }];
 
-test('characters are unique and every question splits the board', () => {
-  assert.equal(S.N, 24);
-  const sig = S.CHARACTERS.map((c) => S.QUESTIONS.map((q) => +q.test(c)).join(''));
-  assert.equal(new Set(sig).size, 24, 'every face is distinguishable by questions');
-  for (const q of S.QUESTIONS) {
-    const yes = S.CHARACTERS.filter(q.test).length;
-    assert.ok(yes > 0 && yes < 24, q.id);
-  }
+for (const [name, deck] of Object.entries(S.DECKS)) {
+  test(`${name} deck: 24 faces, all distinguishable by the list questions`, () => {
+    assert.equal(deck.length, 24);
+    const sig = deck.map((c) => S.QUESTIONS.map((q) => +q.test(c)).join(''));
+    const dupes = deck.filter((c, i) => sig.indexOf(sig[i]) !== i).map((c) => c.name);
+    assert.deepEqual(dupes, [], 'every face is distinguishable by questions');
+    assert.equal(new Set(deck.map((c) => c.name)).size, 24);
+  });
+}
+
+test('out-loud mode: no app questions, End turn passes the turn', () => {
+  let s = S.newGame(P, 0, { mode: 'loud', deck: 'famous' });
+  s = S.applyAction(s, { type: 'deal' }, -1, [0, 1]);
+  assert.throws(() => S.applyAction(s, { type: 'ask', q: 'hat' }, 0));
+  s = S.applyAction(s, { type: 'pass' }, 0);
+  assert.equal(s.current, 1);
+  assert.throws(() => S.applyAction(s, { type: 'pass' }, 0));
+  const g = S.applyAction(s, { type: 'guess', index: 0 }, 1);
+  assert.deepEqual(g.winners, [1]); // A's secret was index 0
 });
 
 test('ask answers truthfully, passes the turn; autoflip; right and wrong guesses', () => {
-  let s = S.newGame(P);
+  let s = S.newGame(P, 0, { mode: 'list' });
   s = S.applyAction(s, { type: 'deal' }, -1, [0, 1]); // A has Ava, B has Ben (glasses)
   s = S.applyAction(s, { type: 'ask', q: 'glasses' }, 0);
   assert.equal(s.asks[0].yes, true);

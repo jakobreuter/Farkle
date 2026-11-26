@@ -44,14 +44,15 @@ export function faceSVG(c, i) {
     ? '<path d="M41 69 Q50 78 59 69 Z" fill="#fff" stroke="#7a2e2e" stroke-width="1.6" stroke-linejoin="round"/>'
     : '<path d="M43 71 Q50 74 57 71" stroke="#7a2e2e" stroke-width="2" fill="none" stroke-linecap="round"/>');
   if (has('e')) parts.push('<circle cx="22" cy="64" r="2.6" fill="#f2c200"/><circle cx="78" cy="64" r="2.6" fill="#f2c200"/>');
+  if (has('t')) parts.push('<path d="M44 84 L50 88 L56 84 L53 100 L47 100 Z" fill="#c92a2a" stroke="#0003"/><path d="M40 84 L50 88 L60 84" stroke="#fff" stroke-width="2" fill="none"/>');
   return `<svg viewBox="0 0 100 100" aria-hidden="true">${parts.join('')}</svg>`;
 }
 
 const rulesHTML = () => `
   <ol>
     <li>You each get a secret character. Find out theirs before they find yours.</li>
-    <li>On your turn, <b>ask one question</b> — the answer is given automatically and truthfully — or <b>make a guess</b>.</li>
-    <li>Tap faces on your board to flip them down. <b>Flip non-matching</b> does it for you after an answer.</li>
+    <li>On your turn, <b>ask one yes/no question</b> — out loud, then tap <b>End turn</b> (or pick it from the list, if the host chose that) — or <b>make a guess</b>.</li>
+    <li>Tap faces on your board to flip them down as you rule them out.</li>
     <li>Guess right and you win. Guess wrong and you lose — so be sure!</li>
   </ol>`;
 
@@ -62,9 +63,15 @@ export default {
   blurb: 'Ask yes/no questions, find their face.',
   minPlayers: 2,
   maxPlayers: 2,
-  options: [],
+  options: [
+    { key: 'mode', label: 'Questions', default: 'loud', choices: [['loud', 'Ask out loud'], ['list', 'Pick from a list']] },
+    { key: 'deck', label: 'Characters', default: 'classic', choices: [['classic', 'Cartoon characters'], ['famous', 'Famous people']] },
+  ],
+  // a computer can't hear questions asked out loud
+  botOk: (opts) => opts.mode === 'list',
+  botNote: 'Computer players need “Questions: Pick from a list”.',
 
-  setup(players, _opts, { first }) { return S.newGame(players, first % 2); },
+  setup(players, opts, { first }) { return S.newGame(players, first % 2, { mode: opts.mode, deck: opts.deck }); },
   randomFor(s, a) { return a.type === 'deal' && s.phase === 'deal' ? [S.N, S.N] : null; },
   apply(s, a, seat, { rand }) {
     if ((a.type === 'deal') !== (seat === -1)) throw new Error('not allowed');
@@ -79,9 +86,9 @@ export default {
     // tidy the board after an answer
     if (me.lastQ) {
       const q = S.Q[me.lastQ.q];
-      if (up().some((i) => q.test(S.CHARACTERS[i]) !== me.lastQ.yes)) return { type: 'autoflip' };
+      if (up().some((i) => q.test(S.deckOf(s)[i]) !== me.lastQ.yes)) return { type: 'autoflip' };
     }
-    if (s.current !== seat) return null;
+    if (s.current !== seat || s.mode !== 'list') return null;
     const left = up();
     if (left.length === 1) return { type: 'guess', index: left[0] };
     // ask the question that splits the remaining faces most evenly
@@ -90,7 +97,7 @@ export default {
     let bestGap = Infinity;
     for (const q of S.QUESTIONS) {
       if (asked.has(q.id)) continue;
-      const yes = left.filter((i) => q.test(S.CHARACTERS[i])).length;
+      const yes = left.filter((i) => q.test(S.deckOf(s)[i])).length;
       if (!yes || yes === left.length) continue;
       const gap = Math.abs(left.length - 2 * yes);
       if (gap < bestGap) { bestGap = gap; best = q; }
@@ -115,15 +122,17 @@ export default {
           <div class="mine-face"></div>
           <div class="ask">
             <select class="qsel"><option value="">Ask a question…</option>${S.QUESTIONS.map((q) => `<option value="${q.id}">${esc(q.text)}</option>`).join('')}</select>
+            <div class="loudnote">Ask one yes/no question out loud.</div>
             <div class="askrow">
               <button class="btn primary" data-a="ask">Ask</button>
+              <button class="btn primary" data-a="pass">End turn</button>
               <button class="btn" data-a="guessmode">Make a guess</button>
             </div>
           </div>
         </div>
         <div class="answer"></div>
         <div class="board"></div>
-        <div class="boardtools"><button class="btn small" data-a="auto">Flip non-matching</button><span class="hint"></span></div>
+        <div class="boardtools"><span class="hint"></span></div>
         <div class="banner hidden"></div>
         <div class="turn-banner"></div>
       </section>
@@ -139,7 +148,14 @@ export default {
     const mySeat = () => api.mySeat();
     const myTurn = () => state && state.phase === 'play' && state.current === mySeat();
 
-    q('.board').innerHTML = S.CHARACTERS.map((c, i) => `<button class="fcard" data-i="${i}">${faceSVG(c, i)}<span>${esc(c.name)}</span></button>`).join('');
+    let boardDeck = null;
+    const deck = () => S.deckOf(state);
+    function buildBoard() {
+      if (boardDeck === state.deck) return;
+      boardDeck = state.deck;
+      q('.board').innerHTML = deck().map((c, i) => `<button class="fcard" data-i="${i}">${faceSVG(c, i)}<span class="${c.name.split(' ').some((w) => w.length > 9) ? 'longname' : ''}">${esc(c.name)}</span></button>`).join('');
+      q('.board').classList.toggle('famous', state.deck === 'famous');
+    }
 
     q('.board').addEventListener('click', (e) => {
       const b = e.target.closest('.fcard');
@@ -158,16 +174,15 @@ export default {
       const a = e.target.closest('[data-a]')?.dataset.a;
       if (!a || !state) return;
       if (a === 'ask' && myTurn() && q('.qsel').value) { api.act({ type: 'ask', q: q('.qsel').value }); q('.qsel').value = ''; }
+      if (a === 'pass' && myTurn() && !guessMode) api.act({ type: 'pass' });
       if (a === 'guessmode' && myTurn()) { guessMode = !guessMode; picked = null; render(); }
       if (a === 'confirm' && myTurn() && picked != null) { api.act({ type: 'guess', index: picked }); guessMode = false; picked = null; }
-      if (a === 'auto' && state.players[mySeat()]?.lastQ) {
-        try { state = S.applyAction(state, { type: 'autoflip' }, mySeat()); render(); } catch { return; }
-        api.act({ type: 'autoflip' });
-      }
     });
 
     function render() {
       if (!state) return;
+      buildBoard();
+      const loud = state.mode === 'loud';
       const seat = mySeat();
       const me = state.players[seat];
       const opp = state.players[1 - Math.max(0, seat)];
@@ -177,13 +192,19 @@ export default {
       q('.ups').textContent = me ? `You ${S.facesUp(me)} · ${opp.name} ${S.facesUp(opp)} left` : '';
 
       if (me && me.secret != null) {
-        const c = S.CHARACTERS[me.secret];
+        const c = deck()[me.secret];
         q('.mine-face').innerHTML = `<div class="mf">${faceSVG(c, me.secret)}</div><div><div class="muted small">Your secret face</div><b>${esc(c.name)}</b></div>`;
       }
       const sel = q('.qsel');
       sel.disabled = !myTurn() || guessMode;
-      const [askBtn, guessBtn] = el.querySelectorAll('.askrow .btn');
+      sel.classList.toggle('hidden', loud);
+      q('.loudnote').classList.toggle('hidden', !loud);
+      q('.loudnote').textContent = myTurn() ? 'Ask one yes/no question out loud, then tap End turn.' : `${cur.name} asks you a question out loud — answer honestly!`;
+      const [askBtn, passBtn, guessBtn] = el.querySelectorAll('.askrow .btn');
+      askBtn.classList.toggle('hidden', loud);
+      passBtn.classList.toggle('hidden', !loud);
       askBtn.disabled = !myTurn() || guessMode;
+      passBtn.disabled = !myTurn() || guessMode;
       guessBtn.disabled = !myTurn();
       guessBtn.textContent = guessMode ? 'Cancel guess' : 'Make a guess';
 
@@ -192,8 +213,10 @@ export default {
       const ans = q('.answer');
       if (guessMode) {
         ans.innerHTML = picked != null
-          ? `<span>Guess <b>${esc(S.CHARACTERS[picked].name)}</b>? Wrong guess loses!</span><button class="btn primary small" data-a="confirm">Guess ${esc(S.CHARACTERS[picked].name)}</button>`
+          ? `<span>Guess <b>${esc(deck()[picked].name)}</b>? Wrong guess loses!</span><button class="btn primary small" data-a="confirm">Guess ${esc(deck()[picked].name.split(' ')[0])}</button>`
           : '<span>Tap the face you think it is.</span>';
+      } else if (loud) {
+        ans.innerHTML = `<span>${myTurn() ? 'Your turn — ask out loud, or make a guess.' : `Waiting for ${esc(cur.name)} to ask…`}</span>`;
       } else if (last) {
         const who = last.seat === seat ? 'You' : state.players[last.seat].name;
         ans.innerHTML = `<span>${esc(who)} asked: ${esc(S.Q[last.q].text)}</span><b class="${last.yes ? 'yes' : 'no'}">${last.yes ? 'YES' : 'NO'}</b>`;
@@ -207,9 +230,8 @@ export default {
         b.classList.toggle('picked', guessMode && picked === i);
         b.classList.toggle('reveal', state.phase === 'over' && opp.secret === i);
       });
-      const autoBtn = q('[data-a=auto]');
-      autoBtn.disabled = !me?.lastQ || state.phase !== 'play';
-      q('.boardtools .hint').textContent = me?.lastQ ? `Your last answer: ${S.Q[me.lastQ.q].text} ${me.lastQ.yes ? 'Yes' : 'No'}` : 'Tap faces to flip them down.';
+      q('.boardtools .hint').textContent = !loud && me?.lastQ ? `Your last answer: ${S.Q[me.lastQ.q].text} ${me.lastQ.yes ? 'Yes' : 'No'} — tap faces to flip them down.` : 'Tap faces to flip them down as you rule them out.';
+      q('.qlog-card').classList.toggle('hidden', loud);
       q('.qlog').innerHTML = state.asks.slice().reverse().map((x) => `<li><b>${esc(x.seat === seat ? 'You' : state.players[x.seat].name)}:</b> ${esc(S.Q[x.q].text)} <span class="${x.yes ? 'yes' : 'no'}">${x.yes ? 'Yes' : 'No'}</span></li>`).join('') || '<li class="muted">No questions yet.</li>';
     }
 
@@ -220,7 +242,7 @@ export default {
         if (!myTurn()) { guessMode = false; picked = null; }
         render();
         const ev = next.event;
-        const key = ev ? `${next.asks.length}:${ev.kind}` : '';
+        const key = ev ? `${next.asks.length}:${next.turns || 0}:${ev.kind}` : '';
         if (old && ev && key !== lastEventKey) {
           lastEventKey = key;
           if (ev.kind === 'ask') banner(q('.banner'), ev.yes ? 'YES' : 'NO', ev.yes ? 'bank' : 'farkle', 1200);

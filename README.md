@@ -23,8 +23,8 @@ Play alone or fill a seat: the host can tap **🤖 Add computer player** in the 
 - **Lucky Streak**: an original press-your-luck card game. Flip cards and bust on a repeated number.
 - **Property Rush**: an original set-collecting card game for 2–5 players. Bank money, place properties, charge rent,
   swipe and swap deals, and block with Shields. The first to 3 complete sets wins.
-- **Secret Face**: an original 2-player deduction game with 24 illustrated characters. Ask yes/no questions
-  (answered automatically), flip faces down, and guess the other player's face.
+- **Secret Face**: 2-player face-guessing game. Ask yes/no questions out loud (or pick from a list the app answers),
+  flip faces down, and guess the other player's face. Choose cartoon characters or famous people.
 
 ## Fair randomness
 - Every die, card and word pick is exactly uniform. There is no weighting, no streak or "catch-up" logic, and every player is handled the same way.
