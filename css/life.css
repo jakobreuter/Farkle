@@ -300,7 +300,7 @@
   .life.lp-ended .lp-viewport { height: clamp(320px, calc(100dvh - 330px), 480px); }
 }
 @media (min-width: 821px) {
-  .life .lp-viewport { height: 400px; }
+  .life .lp-viewport { height: 340px; }
   .life .lp-dock { height: 150px; }
   .life .lp-wheel { width: 136px; height: 136px; }
 }
