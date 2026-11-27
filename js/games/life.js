@@ -158,9 +158,8 @@ export default {
         </div>
         <div class="lp-dock">
           <div class="lp-wheel"><div class="lp-pointer"></div><svg class="lp-wheel-svg" viewBox="-50 -50 100 100"></svg><div class="lp-hub"></div></div>
-          <button class="btn primary big lp-spin">SPIN</button>
+          <div class="lp-side"><button class="btn primary big lp-spin">SPIN</button><div class="lp-mybar"></div></div>
         </div>
-        <div class="lp-mybar"></div>
         <div class="hint"></div>
         <div class="banner hidden"></div>
         <div class="turn-banner"></div>

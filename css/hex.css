@@ -38,7 +38,7 @@
 .hex .hex-poly { stroke: rgba(60,40,10,.35); stroke-width: 3; }
 .hex .hex-glow { fill: none; stroke: rgba(255,255,255,.22); stroke-width: 3; pointer-events: none; }
 .hex .hex-tile { transition: filter .4s; }
-.hex .hex-tile.hex-stormed { filter: saturate(.35) brightness(.78); }
+.hex .hex-tile.hex-stormed { filter: brightness(.72); }
 .hex .hex-tile.hex-hot .hex-glow { stroke: #fff6c8; stroke-width: 10; animation: hexHot 1.1s ease-in-out 2; }
 @keyframes hexHot { 50% { stroke-opacity: .15; } }
 .hex .hex-ico { font-size: 40px; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }

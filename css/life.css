@@ -288,13 +288,77 @@
 .life .lp-tl-a { font-weight: 900; color: var(--muted); width: 22px; flex: none; font-variant-numeric: tabular-nums; }
 .life .lp-tl-e { font-size: 1.1rem; flex: none; }
 
+
+/* ---------- 2.0: market, goals, action cards ---------- */
+.life .lp-market {
+  height: 26px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: .76rem; white-space: nowrap; overflow: hidden; color: #fff;
+}
+.life .lp-market.pulse { animation: lpPulse .8s ease-out; }
+@keyframes lpPulse { 30% { transform: scale(1.04); filter: brightness(1.3); } }
+.life .lp-mk-t { font-weight: 800; opacity: .8; }
+.life .lp-mk { display: inline-flex; align-items: center; gap: 2px; background: rgba(0,0,0,.22); border-radius: 999px; padding: 2px 7px; font-variant-numeric: tabular-nums; }
+.life .lp-mk b { font-weight: 900; }
+.life .lp-mk.up { color: #b9f5a8; }
+.life .lp-mk.down { color: #ffb3b3; }
+.life .lp-mk.flash { animation: lpFlash 1.2s ease-out; }
+@keyframes lpFlash { 0% { background: rgba(255,255,255,.5); } 100% { background: rgba(0,0,0,.22); } }
+
+.life .lp-side { display: flex; flex-direction: column; justify-content: center; gap: 6px; flex: 0 1 240px; min-width: 0; }
+.life .lp-side .lp-spin { width: 100%; min-width: 0; padding: 10px 6px; }
+.life .lp-mybar { height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.life .lp-mybar:empty { display: none; }
+.life .lp-goal {
+  display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1 1 0; height: 44px;
+  background: linear-gradient(160deg, #fff6df, #f6e2b0); color: var(--ink); border-radius: 10px; padding: 3px 8px;
+  border: 2px solid var(--accent); box-shadow: 0 2px 4px rgba(0,0,0,.3);
+}
+.life .lp-goal.dim { opacity: .6; border-style: dashed; }
+.life .lp-goal > span:first-child { font-size: 1.15rem; flex: none; }
+.life .lp-goal > span:last-child { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.life .lp-goal b { font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.life .lp-goal small { font-size: .68rem; color: var(--muted); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.life .lp-hand { display: flex; gap: 5px; flex: none; }
+.life .lp-hc {
+  width: 46px; height: 44px; border-radius: 8px; border: 2px solid rgba(255,255,255,.25); padding: 1px;
+  background: linear-gradient(160deg, #3a2f6b, #241c48); color: #fff; font: inherit; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+}
+.life .lp-hc span { font-size: 1.1rem; line-height: 1.1; }
+.life .lp-hc small { font-size: .5rem; font-weight: 800; line-height: 1.05; text-align: center; white-space: nowrap; overflow: hidden; max-width: 100%; }
+.life .lp-hc.live { border-color: var(--accent); box-shadow: 0 0 10px rgba(226,167,46,.6); animation: lpBob 1.6s ease-in-out infinite; }
+.life .lp-hc.empty { border-style: dashed; background: rgba(0,0,0,.12); cursor: default; }
+
+.life .lp-chips { display: inline-flex; gap: 2px; flex: none; }
+.life .lp-chip { font-style: normal; font-size: .66rem; background: rgba(0,0,0,.25); border-radius: 6px; padding: 1px 3px; line-height: 1.2; }
+.life .lp-chip.down { background: repeating-linear-gradient(45deg, #2a6e4c 0 4px, #23603f 4px 8px); border: 1px solid var(--accent); }
+
+.life .lp-tile.t-action { background: #b9a6f2; border-color: #5b47a6; }
+.life .lp-tile.t-cash.trav { background: #a8ecf0; border-color: #2a8d96; }
+.life .lp-dec-e { font-size: 2.6rem; text-align: center; line-height: 1.1; }
+.life .lp-jcs.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.life .lp-gc .lp-jc-face { background: linear-gradient(170deg, #f4f0ff 0%, #d9cdfb 100%); border-color: #a493e0; justify-content: center; }
+.life .lp-gc .lp-jc-back { background: repeating-linear-gradient(45deg, #3a2f6b 0 8px, #2e2558 8px 16px); }
+.life .lp-gc .lp-jc-f { font-size: .74rem; color: var(--ink); }
+.life .lp-gc .lp-jc-s { font-size: .9rem; }
+.life .lp-opt.lp-tgt .lp-av { width: 30px; height: 30px; font-size: .9rem; }
+.life .lp-c-vs { display: flex; justify-content: center; align-items: center; gap: 8px; font-weight: 900; margin: 2px 0; }
+.life .lp-c-face.k-action { border-color: #7b61d6; }
+.life .lp-c-face.k-block { border-color: #3a8bd6; }
+.life .lp-tl-goal { font-size: .85rem; background: #f3eee1; border-radius: 10px; padding: 6px 10px; }
+.life .lp-tl-goal em { font-style: normal; color: var(--muted); font-weight: 700; }
+.life .lp-fg { margin-top: 6px; font-weight: 800; font-size: .82rem; padding: 4px 8px; border-radius: 8px; }
+.life .lp-fg.ok { background: #dff3d8; color: #23602f; }
+.life .lp-fg.no { background: #f6e3e3; color: #8f2b2b; }
+.life .lp-fg-mini .lp-fg { margin-top: 3px; padding: 1px 6px; font-size: .72rem; display: inline-block; }
+
 @media (max-width: 600px) {
   .life.game { gap: 8px; }
   .life .lp-life { flex-basis: 150px; padding: 6px 8px 6px 11px; }
-  .life .lp-viewport { height: 230px; height: clamp(200px, calc(100dvh - 440px), 360px); }
-  .life .lp-dock { height: 120px; gap: 16px; }
-  .life .lp-wheel { width: 110px; height: 110px; }
-  .life .lp-spin { flex: 0 1 140px; min-width: 0; }
+  .life .lp-viewport { height: 200px; height: clamp(190px, calc(100dvh - 465px), 340px); }
+  .life .lp-dock { height: 108px; }
+  .life .lp-wheel { width: 100px; height: 100px; }
+  .life .lp-dock { gap: 12px; }
   .life .lp-teaser { font-size: .8rem; }
   .life .lp-jc { height: 172px; }
   .life.lp-ended .lp-viewport { height: clamp(320px, calc(100dvh - 330px), 480px); }

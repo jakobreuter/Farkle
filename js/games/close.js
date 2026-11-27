@@ -159,8 +159,9 @@ export default {
     q('.cc-slots').addEventListener('click', (e) => {
       const b = e.target.closest('.cc-slot');
       if (!b || !canBet()) return;
+      // fill an empty bet first; once both are down, move the selected one
+      if (marks[sel].slot != null && marks[1 - sel].slot == null) sel = 1 - sel;
       marks[sel].slot = Number(b.dataset.i);
-      if (marks[1 - sel].slot == null) sel = 1 - sel;
       renderBet();
     });
     q('.cc-betbar').addEventListener('click', (e) => {
@@ -203,10 +204,10 @@ export default {
       const wrap = q('.cc-slots');
       wrap.classList.toggle('two', s.slots.length <= 4);
       wrap.innerHTML = s.slots.map((sl, i) => {
-        const names = i === 0 ? 'every guess over' : sl.who.map((w) => (w === seat() ? 'You' : s.players[w].name)).join(', ');
+        const names = i === 0 ? 'all guesses over' : sl.who.map((w) => (w === seat() ? 'You' : s.players[w].name)).join(', ');
         return `<button class="cc-slot${i === 0 ? ' high' : ''}" data-i="${i}" style="animation-delay:${i ? 120 + (i - 1) * 140 : 0}ms">
           <span class="cc-odds">${sl.odds}:1</span>
-          <span class="cc-sv2">${i === 0 ? 'All too high' : esc(full(sl.v, cq))}</span>
+          <span class="cc-sv2">${i === 0 ? 'Too high' : esc(full(sl.v, cq))}</span>
           <span class="cc-own">${esc(names)}</span>
           <span class="cc-chips"></span></button>`;
       }).join('');
@@ -263,7 +264,7 @@ export default {
         const m = marks[mi];
         b.classList.toggle('sel', betting && mi === sel);
         b.disabled = !betting;
-        b.lastElementChild.textContent = m.slot == null ? 'tap a guess' : m.slot === 0 ? 'Too high' : compact(s.slots[m.slot].v, cq);
+        b.lastElementChild.textContent = m.slot == null || !s.slots[m.slot] ? 'tap a guess' : m.slot === 0 ? 'Too high' : compact(s.slots[m.slot].v, cq);
       });
       q('.cc-sv b').textContent = String(marks[sel].extra);
       const room = chips() - marks[1 - sel].extra;
@@ -414,7 +415,7 @@ export default {
       const k = `${s.phase}|${s.qn}`;
       if (k !== key) {
         if (s.phase === 'guess') { draft = ''; }
-        if (s.phase === 'bet') { marks = [{ slot: null, extra: 0 }, { slot: null, extra: 0 }]; sel = 0; }
+        if (s.phase === 'bet' || key.split('|')[1] !== String(s.qn)) { marks = [{ slot: null, extra: 0 }, { slot: null, extra: 0 }]; sel = 0; }
         key = k;
       }
       const label = s.phase === 'deal' ? 'Getting ready…' : s.phase === 'over' ? 'Final scores' : `Question ${s.qn + 1} of ${s.total}`;
@@ -452,7 +453,7 @@ export default {
       }
       renderBoard();
       renderClock();
-      const ht = hintText();
+      const ht = `<span>${hintText()}</span>`;
       if (q('.hint').innerHTML !== ht) q('.hint').innerHTML = ht;
     }
 

@@ -1179,7 +1179,7 @@ function paydaysAhead(s, p) {
   }
   return n;
 }
-const GOAL_WEIGHT = { tycoon: 2, family: 2.5, homeowner: 1.5, globe: 2, scholar: 0, risk: 1, hustler: 2.5, thrifty: 1, shark: 2, star: 0, early: 1.2 };
+const GOAL_WEIGHT = { tycoon: 2, family: 1.5, homeowner: 1.5, globe: 2, scholar: 0, risk: 1, hustler: 2.5, thrifty: 1, shark: 2, star: 0, early: 1.2 };
 export function botGoalScore(p, g) {
   let w = GOAL_WEIGHT[g] ?? 1;
   if (g === 'scholar') w = p.college ? 3 : -5;

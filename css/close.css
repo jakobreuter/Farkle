@@ -30,7 +30,7 @@
 .close .cc-qunit { height: 1.1em; font-size: .74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* the stage holds one pane at a time and never changes height */
-.close .cc-stage { position: relative; height: 352px; }
+.close .cc-stage { position: relative; height: 356px; }
 .close .cc-pane { position: absolute; inset: 0; display: none; flex-direction: column; gap: 8px; }
 .close .cc-pane.on { display: flex; animation: ccFade .35s ease; }
 @keyframes ccFade { from { opacity: 0; } to { opacity: 1; } }
@@ -78,14 +78,14 @@
 .close .cc-who span.done { opacity: 1; border-color: var(--c); background: rgba(0,0,0,.25); }
 
 /* ---- number line ---- */
-.close .cc-line { position: relative; height: 62px; flex: none; margin: 0 4px; }
+.close .cc-line { position: relative; height: 72px; flex: none; margin: 0 4px; }
 .close .cc-axis {
-  position: absolute; left: 0; right: 0; top: 30px; height: 4px; border-radius: 2px;
+  position: absolute; left: 0; right: 0; top: 40px; height: 4px; border-radius: 2px;
   background: linear-gradient(90deg, rgba(255,255,255,.25), rgba(255,255,255,.75));
 }
 .close .cc-axis::after { content: ''; position: absolute; right: -4px; top: -5px; border: 7px solid transparent; border-left: 9px solid rgba(255,255,255,.75); border-right: 0; }
 .close .cc-zone {
-  position: absolute; left: 0; top: 18px; height: 28px; box-sizing: border-box;
+  position: absolute; left: 0; top: 28px; height: 28px; box-sizing: border-box;
   font-size: .54rem; line-height: 1.05; font-weight: 800; text-transform: uppercase; text-align: center;
   display: flex; align-items: center; justify-content: center;
   color: rgba(255,255,255,.65); background: rgba(0,0,0,.22); border-radius: 6px; border: 1px dashed rgba(255,255,255,.3);
@@ -93,21 +93,21 @@
 .close .cc-dots { position: absolute; inset: 0; }
 .close .cc-dot { position: absolute; top: 0; width: 0; height: 100%; animation: ccSlide .6s cubic-bezier(.2,1.1,.4,1) both; }
 .close .cc-dot i {
-  position: absolute; left: -8px; top: 24px; width: 16px; height: 16px; border-radius: 50%;
+  position: absolute; left: -8px; top: 34px; width: 16px; height: 16px; border-radius: 50%;
   background: var(--c); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.4); box-sizing: border-box;
 }
 .close .cc-dot span {
   position: absolute; left: 50%; transform: translateX(-50%);
   font-size: .68rem; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-.close .cc-dot.up span { top: 4px; }
-.close .cc-dot.dn span { top: 43px; }
+.close .cc-dot.up span { top: 15px; }
+.close .cc-dot.dn span { top: 53px; }
 @keyframes ccSlide { from { transform: translateX(-60vw); opacity: 0; } 60% { opacity: 1; } to { transform: none; opacity: 1; } }
-.close .cc-pin { position: absolute; top: -2px; width: 0; height: 100%; display: none; z-index: 2; }
+.close .cc-pin { position: absolute; top: 0; width: 0; height: 100%; display: none; z-index: 2; }
 .close .cc-pin.on { display: block; }
-.close .cc-pin::before { content: ''; position: absolute; left: -1.5px; top: 18px; width: 3px; height: 30px; background: #ff5a5a; border-radius: 2px; box-shadow: 0 0 8px #ff5a5a; }
+.close .cc-pin::before { content: ''; position: absolute; left: -1.5px; top: 26px; width: 3px; height: 32px; background: #ff5a5a; border-radius: 2px; box-shadow: 0 0 8px #ff5a5a; }
 .close .cc-pin span {
-  position: absolute; left: 50%; top: 0; transform: translate(-50%, -2px);
+  position: absolute; left: 50%; top: 0; transform: translate(-50%, -3px);
   background: #ff5a5a; color: #fff; font-weight: 900; font-size: .72rem; padding: 1px 7px; border-radius: 999px;
   white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.4);
 }
@@ -116,12 +116,12 @@
 
 /* ---- betting slots ---- */
 .close .cc-slots {
-  display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 52px; gap: 6px;
-  height: 168px; flex: none; align-content: start;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 52px; gap: 5px;
+  height: 166px; flex: none; align-content: start;
 }
-.close .cc-slots.two { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 64px; }
+.close .cc-slots.two { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 62px; }
 .close .cc-slot {
-  position: relative; min-width: 0; border: 0; border-radius: 10px; padding: 4px 6px 3px; box-sizing: border-box;
+  position: relative; min-width: 0; border: 0; border-radius: 10px; padding: 3px 6px; box-sizing: border-box;
   background: var(--card); color: var(--ink); font: inherit; text-align: left; cursor: pointer;
   display: flex; flex-direction: column; justify-content: center; gap: 0;
   box-shadow: 0 3px 0 #cfc3a3; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
@@ -138,10 +138,10 @@
 }
 .close .cc-slot.high .cc-odds { background: #ff7a9a; color: #2a0010; }
 .close .cc-sv2 {
-  font-weight: 900; font-size: .98rem; line-height: 1.15; padding-right: 30px;
+  font-weight: 900; font-size: .98rem; line-height: 1.1; padding-right: 30px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;
 }
-.close .cc-slot.high .cc-sv2 { font-size: .82rem; }
+.close .cc-slot.high .cc-sv2 { font-size: .9rem; }
 .close .cc-own { font-size: .64rem; font-weight: 700; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 1.2em; }
 .close .cc-chips { display: flex; gap: 2px; height: 16px; overflow: hidden; }
 .close .cc-chips i {
@@ -202,6 +202,7 @@
 .close .cc-ans.in .cc-fact { animation: ccFade .5s ease 1.3s both; }
 
 .close .hint { height: 2.6em; }
+.close .hint > span { display: block; }
 .close .banner { top: 50%; }
 
 @media (max-width: 600px) {
@@ -215,7 +216,9 @@
   .close .cc-qcard { height: 78px; padding: 6px 10px; }
   .close .cc-qtext { font-size: .95rem; }
   .close .cc-qcard.long .cc-qtext { font-size: .84rem; }
-  .close .cc-stage { height: 336px; }
+  .close .cc-stage { height: 344px; }
   .close .cc-key { height: 44px; }
+  .close .cc-betbar { height: 44px; }
+  .close .cc-bet .btn.big, .close .cc-guess .btn.big { padding: 12px 6px; }
   .close .hint { font-size: .82rem; }
 }

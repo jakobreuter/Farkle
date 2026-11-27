@@ -105,8 +105,8 @@ function boardArt(s) {
     const ty = H.TILES[ti].y * U;
     const mx = (ax + bx) / 2;
     const my = (ay + by) / 2;
-    const hx = tx + (mx - tx) * 1.62;
-    const hy = ty + (my - ty) * 1.62;
+    const hx = tx + (mx - tx) * 1.52;
+    const hy = ty + (my - ty) * 1.52;
     const t = s.harbors[hi];
     const label = t < 0 ? '<text class="hex-h3" x="0" y="8">3:1</text>' : `<text class="hex-hi" x="0" y="-1">${RES_ICON[t]}</text><text class="hex-h2" x="0" y="19">2:1</text>`;
     return `<g class="hex-harbor"><line x1="${hx}" y1="${hy}" x2="${ax}" y2="${ay}"/><line x1="${hx}" y1="${hy}" x2="${bx}" y2="${by}"/>
