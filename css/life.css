@@ -306,29 +306,32 @@
 
 .life .lp-side { display: flex; flex-direction: column; justify-content: center; gap: 6px; flex: 0 1 240px; min-width: 0; }
 .life .lp-side .lp-spin { width: 100%; min-width: 0; padding: 10px 6px; }
-.life .lp-mybar { height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.life .lp-mybar { height: 44px; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
 .life .lp-mybar:empty { display: none; }
 .life .lp-goal {
   display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1 1 0; height: 44px;
-  background: linear-gradient(160deg, #fff6df, #f6e2b0); color: var(--ink); border-radius: 10px; padding: 3px 8px;
+  background: linear-gradient(160deg, #fff6df, #f6e2b0); color: var(--ink); border-radius: 10px; padding: 3px 5px;
   border: 2px solid var(--accent); box-shadow: 0 2px 4px rgba(0,0,0,.3);
 }
 .life .lp-goal.dim { opacity: .6; border-style: dashed; }
 .life .lp-goal > span:first-child { font-size: 1.15rem; flex: none; }
 .life .lp-goal > span:last-child { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
-.life .lp-goal b { font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.life .lp-goal small { font-size: .68rem; color: var(--muted); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.life .lp-hand { display: flex; gap: 5px; flex: none; }
+.life .lp-goal b { font-size: .7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.life .lp-goal small { font-size: .62rem; color: var(--muted); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.life .lp-hand { display: flex; gap: 4px; flex: none; }
 .life .lp-hc {
-  width: 46px; height: 44px; border-radius: 8px; border: 2px solid rgba(255,255,255,.25); padding: 1px;
+  width: 42px; height: 44px; border-radius: 8px; border: 2px solid rgba(255,255,255,.25); padding: 1px;
   background: linear-gradient(160deg, #3a2f6b, #241c48); color: #fff; font: inherit; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
 }
 .life .lp-hc span { font-size: 1.1rem; line-height: 1.1; }
 .life .lp-hc small { font-size: .5rem; font-weight: 800; line-height: 1.05; text-align: center; white-space: nowrap; overflow: hidden; max-width: 100%; }
-.life .lp-hc.live { border-color: var(--accent); box-shadow: 0 0 10px rgba(226,167,46,.6); animation: lpBob 1.6s ease-in-out infinite; }
+.life .lp-hc.live { border-color: var(--accent); box-shadow: 0 0 10px rgba(226,167,46,.6); animation: lpHcGlow 1.6s ease-in-out infinite; }
+@keyframes lpHcGlow { 50% { box-shadow: 0 0 18px 3px rgba(226,167,46,.9); } }
 .life .lp-hc.empty { border-style: dashed; background: rgba(0,0,0,.12); cursor: default; }
 
+.life .lp-hfw { display: flex; gap: 4px; align-items: center; }
+.life .lp-hf { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .life .lp-chips { display: inline-flex; gap: 2px; flex: none; }
 .life .lp-chip { font-style: normal; font-size: .66rem; background: rgba(0,0,0,.25); border-radius: 6px; padding: 1px 3px; line-height: 1.2; }
 .life .lp-chip.down { background: repeating-linear-gradient(45deg, #2a6e4c 0 4px, #23603f 4px 8px); border: 1px solid var(--accent); }

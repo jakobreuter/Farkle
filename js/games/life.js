@@ -552,8 +552,8 @@ export default {
       const me = api.mySeat();
       if (lives.children.length !== state.players.length) {
         lives.innerHTML = state.players.map((p, i) => `<div class="lp-life" data-i="${i}" style="--pc:${color(i)}">
-          <div class="lp-lh"><span class="lp-av"></span><span class="lp-nm"></span><span class="lp-chips"></span><span class="lp-cash"></span></div>
-          <div class="lp-ln lp-st"></div><div class="lp-ln lp-job"></div><div class="lp-ln lp-hf"></div><div class="lp-ln lp-ms"></div></div>`).join('');
+          <div class="lp-lh"><span class="lp-av"></span><span class="lp-nm"></span><span class="lp-cash"></span></div>
+          <div class="lp-ln lp-st"></div><div class="lp-ln lp-job"></div><div class="lp-ln lp-hfw"><span class="lp-hf"></span><span class="lp-chips"></span></div><div class="lp-ln lp-ms"></div></div>`).join('');
         lives.classList.toggle('few', state.players.length <= 2);
       }
       state.players.forEach((p, i) => {
@@ -600,7 +600,7 @@ export default {
       const key = JSON.stringify([p.goal, gs, p.hand, canPlay]);
       if (key === barKey) return;
       barKey = key;
-      const goal = gs ? `<div class="lp-goal"><span>${L.GOALS[p.goal].icon}</span><span><b>${L.GOALS[p.goal].name}</b><small>${esc(gs.prog)}${gs.done ? ' ✅' : ''}</small></span></div>` : state.opts.goals ? '<div class="lp-goal dim"><span>🎯</span><span><b>Goal</b><small>not chosen yet</small></span></div>' : '';
+      const goal = gs ? `<div class="lp-goal" title="${esc(L.GOALS[p.goal].text)}"><span>${L.GOALS[p.goal].icon}</span><span><b>${L.GOALS[p.goal].name}</b><small>${gs.done ? '✅ ' : ''}${esc(gs.prog)}</small></span></div>` : state.opts.goals ? '<div class="lp-goal dim"><span>🎯</span><span><b>Goal</b><small>not chosen yet</small></span></div>' : '';
       const hand = state.opts.actions ? `<div class="lp-hand">${[0, 1, 2].map((k) => {
         const c = p.hand[k];
         if (!c) return '<span class="lp-hc empty"></span>';

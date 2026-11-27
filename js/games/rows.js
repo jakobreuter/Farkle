@@ -169,7 +169,9 @@ export default {
       return P.find((p) => p.length === want.size && p.every((m) => want.has(key(m)))) || null;
     }
 
+    const peeking = () => state && me() >= 0 && !mine() && state.phase === 'mark' && state.subs?.[me()] == null;
     goBtn.addEventListener('click', () => {
+      if (peeking()) { viewSeat = null; render(); return; }
       if (!state || me() < 0 || sent || animating()) return;
       if (state.phase === 'roll' && state.active === me()) {
         sent = Date.now();
@@ -357,6 +359,7 @@ export default {
           txt = !plan ? 'Pick one more box' : plan.length ? `Done (${plan.length} mark${plan.length > 1 ? 's' : ''})` : iAmActive ? `Pass (−${R.PENALTY})` : 'Pass';
         }
       } else txt = 'Game over';
+      if (peeking()) { txt = 'Back to my sheet'; dis = false; }
       goBtn.textContent = txt;
       goBtn.disabled = dis;
       goBtn.classList.toggle('rows-warn', state.phase === 'mark' && iAmActive && !done && !sel.length);
@@ -369,7 +372,7 @@ export default {
         else if (done) {
           const wait = state.players.filter((_, i) => state.subs[i] == null).map((p) => p.name);
           hint = `Waiting for ${wait.join(', ')}`;
-        } else if (!mine()) hint = 'Tap your own name below to get back to your sheet.';
+        } else if (!mine()) hint = `Looking at ${state.players[shownSeat()].name}’s sheet. Go back to yours to mark.`;
         else if (iAmActive) hint = `Mark white ${ws} and/or one white + colour total in that colour's row. Mark nothing = penalty.`;
         else hint = `You may mark a ${ws} in any row, or pass.`;
       }
