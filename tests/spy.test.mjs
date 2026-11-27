@@ -172,7 +172,8 @@ test('win: uncovering all your words — or the enemy uncovering your last one',
   assert.equal(r.rows[t].win, true);
   assert.equal(r.rows[t].score, 9);
   assert.equal(r.rows[1 - t].win, false);
-  assert.equal(r.title, `${S.TEAM_NAMES[t]} team wins!`);
+  assert.equal(r.title, `🏆 ${S.TEAM_NAMES[t]} team wins!`);
+  assert.ok(r.winPids.length > 0);
 
   // the other team reveals its 8th word by mistake while the starter guesses
   let u = dealt(4);
