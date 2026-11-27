@@ -400,7 +400,7 @@ export default {
           const L = next.last;
           const ban = q('.banner');
           const myPen = me() >= 0 && L.marks[me()]?.pen;
-          if (L.locks.length) banner(ban, `${L.locks.map((c) => R.COLOR_NAMES[c]).join(' & ').toUpperCase()} LOCKED!`, 'hot');
+          if (L.locks.length) banner(ban, L.locks.length > 1 ? '2 ROWS LOCKED!' : `${R.COLOR_NAMES[L.locks[0]].toUpperCase()} LOCKED!`, 'hot');
           else if (myPen) banner(ban, `PENALTY −${R.PENALTY}`, 'farkle');
         }
         if (old && next.phase === 'roll' && (old.active !== next.active || old.phase === 'deal')) {

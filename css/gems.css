@@ -1,0 +1,218 @@
+/* ---------- Gem Traders ---------- */
+.gems .gt-table { gap: 8px; }
+.gems .gt-goal { font-size: .85rem; opacity: .9; }
+.gems .gt-goal strong { font-size: .9rem; }
+.gems .gt-hint { height: 2.6em; font-size: .86rem; }
+
+/* gem colours */
+.gems .g0 { --g1: #ff8a80; --g2: #d42a35; --g3: #7d0f18; --gt: #fff; }
+.gems .g1 { --g1: #8fbaff; --g2: #2a62d8; --g3: #132c78; --gt: #fff; }
+.gems .g2 { --g1: #8deab3; --g2: #1d9a5a; --g3: #0b5530; --gt: #fff; }
+.gems .g3 { --g1: #dcb0ff; --g2: #8a3fd0; --g3: #45177a; --gt: #fff; }
+.gems .g4 { --g1: #ffffff; --g2: #e9e4d8; --g3: #a9a192; --gt: #3a352b; }
+.gems .g5 { --g1: #fff4b0; --g2: #f0bf2a; --g3: #9a6d00; --gt: #3b2a00; }
+
+/* faceted gem icon */
+.gems .gt-gem {
+  display: inline-block; width: 16px; height: 16px; flex: none; vertical-align: -3px;
+  clip-path: polygon(50% 0, 100% 36%, 80% 100%, 20% 100%, 0 36%);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.75) 0 18%, transparent 19%),
+    linear-gradient(160deg, var(--g1), var(--g2) 55%, var(--g3));
+}
+.gems .gt-gem.gt-in { width: 14px; height: 14px; margin: 0 1px; }
+.gems .gt-gem.gt-big { width: 30px; height: 30px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.4)); }
+
+/* round gem token with a number (costs, held gems) */
+.gems .gt-pip {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+  font-size: .72rem; font-weight: 900; line-height: 1; color: var(--gt); font-variant-numeric: tabular-nums;
+  background: radial-gradient(circle at 35% 30%, var(--g1), var(--g2) 55%, var(--g3));
+  box-shadow: inset 0 -1px 2px rgba(0,0,0,.35), 0 1px 1px rgba(0,0,0,.3);
+  text-shadow: 0 1px 0 rgba(0,0,0,.25);
+}
+.gems .g4.gt-pip, .gems .g5.gt-pip { text-shadow: none; }
+/* card-bonus square */
+.gems .gt-sq {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px;
+  font-size: .72rem; font-weight: 900; line-height: 1; color: var(--gt); font-variant-numeric: tabular-nums;
+  background: linear-gradient(160deg, var(--g1), var(--g2) 60%, var(--g3));
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.35), 0 1px 1px rgba(0,0,0,.3);
+}
+.gems .gt-sq.gt-blank { background: none; box-shadow: none; }
+
+/* ---------- opponents ---------- */
+.gems .gt-opps { display: grid; gap: 5px; }
+.gems .gt-opp {
+  display: grid; grid-template-columns: minmax(0, 1fr) 30px auto; align-items: center; gap: 6px;
+  height: 44px; padding: 0 8px; border-radius: 10px; background: rgba(0,0,0,.22); border: 2px solid transparent;
+  transition: border-color .4s, background .4s;
+}
+.gems .gt-opp.gt-on { border-color: var(--accent); background: rgba(226,167,46,.14); }
+.gems .gt-opp.gt-away { opacity: .55; }
+.gems .gt-opp.gt-win { border-color: #8ef0a8; }
+.gems .gt-oname { display: grid; min-width: 0; line-height: 1.15; }
+.gems .gt-oname span { font-weight: 800; font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gems .gt-oname small { font-size: .68rem; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gems .gt-opts { font-size: 1.3rem; font-weight: 900; color: var(--accent); text-align: center; font-variant-numeric: tabular-nums; }
+.gems .gt-ocols { display: flex; gap: 3px; }
+.gems .gt-oc { display: grid; gap: 2px; justify-items: center; width: 20px; }
+.gems .gt-oc .gt-sq, .gems .gt-oc .gt-pip { width: 17px; height: 17px; font-size: .66rem; }
+.gems .gt-orsv {
+  display: inline-grid; place-items: center; width: 13px; height: 17px; border-radius: 3px; font-size: .62rem; font-weight: 900;
+  background: repeating-linear-gradient(45deg, #6b4a2a 0 3px, #87603a 3px 6px); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
+}
+
+/* ---------- patrons ---------- */
+.gems .gt-patrons { display: flex; gap: 5px; justify-content: center; height: 60px; }
+.gems .gt-patron {
+  flex: 1 1 0; min-width: 0; max-width: 76px; border-radius: 9px; padding: 4px 4px 3px;
+  background: linear-gradient(160deg, #f8ecd2, #e6d2a8); color: var(--ink);
+  box-shadow: 0 2px 6px rgba(0,0,0,.35), inset 0 0 0 1.5px rgba(150,110,40,.45);
+  display: grid; grid-template-rows: auto 1fr auto; gap: 1px; transition: box-shadow .4s;
+}
+.gems .gt-patron.gt-near { box-shadow: 0 0 0 2px var(--accent), 0 0 12px rgba(226,167,46,.6); }
+.gems .gt-ptop { display: flex; justify-content: space-between; align-items: center; line-height: 1; }
+.gems .gt-ptop b { font-size: 1rem; font-weight: 900; color: #6b4a00; }
+.gems .gt-ptop span { font-size: .8rem; }
+.gems .gt-preq { display: flex; gap: 2px; justify-content: center; align-items: center; }
+.gems .gt-preq .gt-sq { width: 16px; height: 16px; font-size: .66rem; }
+.gems .gt-pname { font-size: .56rem; font-weight: 700; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .75; }
+.gems .gt-nopat { align-self: center; font-size: .8rem; opacity: .7; }
+
+/* ---------- market ---------- */
+.gems .gt-market { display: grid; gap: 6px; }
+.gems .gt-row { display: grid; grid-template-columns: 40px repeat(4, minmax(0, 1fr)); gap: 5px; height: 84px; }
+.gems .gt-slot, .gems .gt-deck, .gems .gt-rsv {
+  position: relative; padding: 0; margin: 0; border: 0; background: none; font: inherit; color: inherit; min-width: 0;
+  border-radius: 9px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s, box-shadow .2s;
+}
+.gems .gt-slot:disabled, .gems .gt-rsv:disabled { cursor: default; }
+.gems .gt-slot:focus-visible, .gems .gt-deck:focus-visible, .gems .gt-rsv:focus-visible, .gems .gt-tok:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gems .gt-empty { width: 100%; height: 100%; border-radius: 9px; border: 2px dashed rgba(255,255,255,.18); box-sizing: border-box; }
+
+.gems .gt-cf {
+  width: 100%; height: 100%; border-radius: 9px; background: var(--card); color: var(--ink); overflow: hidden;
+  display: flex; flex-direction: column; box-shadow: 0 3px 7px rgba(0,0,0,.35); box-sizing: border-box; border: 2px solid #fff;
+}
+.gems .gt-ctop {
+  height: 24px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 5px;
+  background: linear-gradient(160deg, var(--g1), var(--g2) 70%, var(--g3));
+}
+.gems .gt-b0 .gt-ctop { --g1: #ffb3ad; --g2: #e1545c; --g3: #b0303a; }
+.gems .gt-b1 .gt-ctop { --g1: #b9d3ff; --g2: #5b8be6; --g3: #3560b8; }
+.gems .gt-b2 .gt-ctop { --g1: #b8f0cf; --g2: #4cb57e; --g3: #2b8655; }
+.gems .gt-b3 .gt-ctop { --g1: #e8ccff; --g2: #a46ddc; --g3: #7840b0; }
+.gems .gt-b4 .gt-ctop { --g1: #ffffff; --g2: #ece7dc; --g3: #cfc7b6; }
+.gems .gt-pts { font-size: 1.15rem; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.55); line-height: 1; }
+.gems .gt-b4 .gt-pts { color: #5a4a2a; text-shadow: none; }
+.gems .gt-ctop .gt-bonus { width: 17px; height: 17px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
+.gems .gt-b0 .gt-bonus { --g1: #ff8a80; --g2: #d42a35; --g3: #7d0f18; }
+.gems .gt-b1 .gt-bonus { --g1: #8fbaff; --g2: #2a62d8; --g3: #132c78; }
+.gems .gt-b2 .gt-bonus { --g1: #8deab3; --g2: #1d9a5a; --g3: #0b5530; }
+.gems .gt-b3 .gt-bonus { --g1: #dcb0ff; --g2: #8a3fd0; --g3: #45177a; }
+.gems .gt-b4 .gt-bonus { --g1: #ffffff; --g2: #d9d2c2; --g3: #8f8777; }
+.gems .gt-cost {
+  flex: 1; display: grid; grid-template-columns: repeat(2, 18px); grid-auto-rows: 18px; gap: 3px;
+  align-content: end; padding: 4px 5px 5px;
+  background: radial-gradient(circle at 80% 30%, rgba(0,0,0,.04), transparent 60%);
+}
+
+.gems .gt-slot.gt-can .gt-cf, .gems .gt-rsv.gt-can .gt-cf { border-color: #8ef0a8; box-shadow: 0 0 0 1.5px #3fbf6a, 0 3px 9px rgba(0,0,0,.4); }
+.gems .gt-slot.gt-picked, .gems .gt-rsv.gt-picked, .gems .gt-deck.gt-picked { transform: translateY(-3px); }
+.gems .gt-slot.gt-picked .gt-cf, .gems .gt-rsv.gt-picked .gt-cf, .gems .gt-deck.gt-picked .gt-back { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 6px 14px rgba(0,0,0,.45); }
+.gems .gt-slot.gt-new .gt-cf { animation: gtDeal .45s cubic-bezier(.2,.8,.3,1); }
+@keyframes gtDeal { from { transform: translateX(-30px) scale(.85) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* deck backs */
+.gems .gt-back {
+  position: absolute; inset: 0; border-radius: 9px; border: 2px solid #fff; box-sizing: border-box;
+  display: grid; place-items: center; box-shadow: 0 3px 7px rgba(0,0,0,.35);
+}
+.gems .gt-back span { font-weight: 900; font-size: .95rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.5); font-family: Georgia, serif; }
+.gems .gt-back.t0 { background: repeating-linear-gradient(45deg, #3f8a5c 0 5px, #2f7049 5px 10px); }
+.gems .gt-back.t1 { background: repeating-linear-gradient(45deg, #c08a1e 0 5px, #a3730f 5px 10px); }
+.gems .gt-back.t2 { background: repeating-linear-gradient(45deg, #3b62b8 0 5px, #2c4d99 5px 10px); }
+.gems .gt-left {
+  position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); font-size: .68rem; font-weight: 800;
+  background: rgba(0,0,0,.45); border-radius: 6px; padding: 0 4px; font-variant-numeric: tabular-nums;
+}
+.gems .gt-deck.gt-gone { opacity: .3; cursor: default; }
+
+/* ---------- supply ---------- */
+.gems .gt-supply { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; height: 62px; }
+.gems .gt-tok {
+  position: relative; display: grid; justify-items: center; align-content: center; gap: 2px; padding: 0; border: 0;
+  border-radius: 12px; background: rgba(0,0,0,.22); color: #fff; font: inherit; cursor: default;
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); transition: transform .15s, background .2s, box-shadow .2s, opacity .3s;
+  -webkit-tap-highlight-color: transparent;
+}
+.gems .gt-tok b { font-size: .9rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.gems .gt-tok em {
+  position: absolute; top: 3px; right: 4px; font-style: normal; font-size: .72rem; font-weight: 900; color: var(--accent-ink);
+  background: var(--accent); border-radius: 8px; padding: 0 4px; line-height: 1.35;
+}
+.gems .gt-tok em:empty { display: none; }
+.gems .gt-tok.gt-live { cursor: pointer; background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.18); }
+.gems .gt-tok.gt-live[data-c="5"] { cursor: default; background: rgba(0,0,0,.22); }
+.gems .gt-tok.gt-picked { background: rgba(226,167,46,.25); box-shadow: inset 0 0 0 2px var(--accent); transform: translateY(-2px); }
+.gems .gt-tok.gt-zero { opacity: .35; }
+.gems .gt-tok.gt-bump .gt-gem { animation: gtBump .4s ease-out; }
+@keyframes gtBump { 40% { transform: scale(1.25); } }
+
+.gems .gt-sel { display: flex; align-items: center; justify-content: center; gap: 2px; }
+.gems .gt-sel .gt-gem.gt-in { flex: none; }
+.gems .gt-ctrl .btn { flex: 1; min-width: 0; padding: 10px 6px; min-height: 42px; }
+.gems .gt-ctrl.gt-off { display: none; }
+
+/* ---------- my tableau ---------- */
+.gems .gt-me { background: rgba(0,0,0,.22); border-radius: 12px; padding: 8px; display: grid; gap: 6px; border: 2px solid transparent; transition: border-color .4s; }
+.gems .gt-me.gt-on { border-color: var(--accent); }
+.gems .gt-me.gt-win { border-color: #8ef0a8; }
+.gems .gt-mehead { display: flex; justify-content: space-between; align-items: baseline; height: 1.4em; gap: 8px; white-space: nowrap; }
+.gems .gt-mename { font-weight: 800; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.gems .gt-mepts { font-size: .85rem; opacity: .9; flex: none; }
+.gems .gt-mepts b { font-size: 1.3rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.gems .gt-mecols { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.gems .gt-mc { display: grid; justify-items: center; gap: 3px; }
+.gems .gt-mc .gt-sq, .gems .gt-mc .gt-pip { width: 24px; height: 24px; font-size: .82rem; }
+.gems .gt-mc small { font-size: .62rem; opacity: .7; height: 1em; line-height: 1; }
+.gems .gt-held { align-content: center; border-left: 1px solid rgba(255,255,255,.18); }
+.gems .gt-held b { font-size: 1.1rem; line-height: 1; }
+.gems .gt-rsvrow { display: grid; grid-template-columns: auto repeat(3, 62px); gap: 6px; align-items: center; justify-content: start; height: 78px; }
+.gems .gt-rsvlbl { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; opacity: .7; writing-mode: vertical-rl; transform: rotate(180deg); }
+.gems .gt-rsv { height: 78px; }
+
+/* ---------- return sheet ---------- */
+.gems .gt-sheetbg { position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; }
+.gems .gt-sheet {
+  width: 100%; max-width: 480px; box-sizing: border-box; background: var(--felt-dark); color: #fff;
+  border-radius: 18px 18px 0 0; border-top: 3px solid var(--accent); padding: 16px 16px calc(18px + env(safe-area-inset-bottom));
+  display: grid; gap: 12px; box-shadow: 0 -10px 30px rgba(0,0,0,.45);
+}
+.gems .gt-sheet.gt-pop { animation: gtUp .25s cubic-bezier(.2,.8,.3,1); }
+@keyframes gtUp { from { transform: translateY(100%); } to { transform: none; } }
+.gems .gt-sheet h3 { margin: 0; font-size: 1.15rem; }
+.gems .gt-shmsg { margin: 0; height: 2.6em; font-size: .9rem; opacity: .9; }
+.gems .gt-shgems { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.gems .gt-shtok {
+  position: relative; display: grid; justify-items: center; gap: 3px; padding: 8px 0 6px; border: 0; border-radius: 12px;
+  background: rgba(255,255,255,.1); color: #fff; font: inherit; cursor: pointer; min-height: 60px;
+}
+.gems .gt-shtok:disabled { cursor: default; opacity: .45; }
+.gems .gt-shtok.gt-picked { opacity: 1; box-shadow: inset 0 0 0 2px var(--accent); background: rgba(226,167,46,.2); }
+.gems .gt-shtok b { font-weight: 900; }
+.gems .gt-shtok em { position: absolute; top: 2px; right: 3px; font-style: normal; font-size: .72rem; font-weight: 900; color: #fff; background: var(--danger); border-radius: 8px; padding: 0 4px; }
+.gems .gt-shtok em:empty { display: none; }
+.gems .gt-sheet .controls .btn { flex: 1; min-height: 44px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gems .gt-slot.gt-new .gt-cf, .gems .gt-tok.gt-bump .gt-gem, .gems .gt-sheet.gt-pop { animation: none; }
+}
+
+@media (max-width: 600px) {
+  .gems .gt-table { padding: 10px 8px; }
+  .gems .gt-row { grid-template-columns: 36px repeat(4, minmax(0, 1fr)); gap: 4px; height: 80px; }
+  .gems .gt-supply { gap: 4px; }
+}
+.gems .gt-z { opacity: .32; }

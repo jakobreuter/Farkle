@@ -42,6 +42,7 @@ export function newGame(players, first = 0, { reactMs = 8000 } = {}) {
     phase: 'deal', // deal | turn | react | lose | swapDraw | swap | over
     current: first,
     turn: 0,
+    quiet: 0, // turns since anyone lost a card (bots play safer when the table stalls)
     reactMs,
     pending: null, // { act, actor, target, role, stage, block, passed, until }
     lose: null, // { seat, until, next }
@@ -169,6 +170,7 @@ function endTurn(s) {
   s.phase = 'turn';
   s.current = nextAlive(s, s.current);
   s.turn += 1;
+  s.quiet = (s.quiet || 0) + 1;
 }
 
 function openWindow(s, stage, now) {
@@ -222,6 +224,7 @@ function resolveAction(s, now) {
 function reveal(s, seat, idx) {
   const p = s.players[seat];
   p.cards[idx].up = true;
+  s.quiet = 0;
   const out = faceDown(p) === 0;
   addLog(s, `${p.name} reveals ${roleName(p.cards[idx].r)}${out ? ' and is out of the court' : ''}.`);
   fx(s, out ? 'out' : 'lose', { seat, role: p.cards[idx].r });
@@ -306,17 +309,20 @@ export function applyAction(state, a, seat, { now = 0, rand = null } = {}) {
     }
 
     case 'timeout': {
-      if (s.phase === 'react' && now >= s.pending.until) {
+      // system step from the host's tick; `at` names the timer it was meant for, so a
+      // stale timeout can never cut short a newer window
+      const at = a.at;
+      if (s.phase === 'react' && at === s.pending.until) {
         closeWindow(s, now);
         return s;
       }
-      if (s.phase === 'lose' && now >= s.lose.until) {
+      if (s.phase === 'lose' && at === s.lose.until) {
         const p = s.players[s.lose.seat];
         reveal(s, s.lose.seat, p.cards.findIndex((c) => !c.up));
         continueWith(s, s.lose.next, now);
         return s;
       }
-      if (s.phase === 'swap' && now >= s.swap.until) {
+      if (s.phase === 'swap' && at === s.swap.until) {
         keepCards(s, s.swap.options.map((_, i) => i).slice(0, s.swap.keep));
         return s;
       }
@@ -464,12 +470,17 @@ function botTurn(s, seat) {
   const has = (r) => hand.includes(r);
   const ok = (act, target) => !actionError(s, seat, act, target);
   const strong = strongest(s, seat);
+  const quiet = s.quiet || 0;
+  const stalled = quiet > 2 * s.players.length + 4;
   if (me.coins >= MUST_BANISH) return { type: 'act', act: 'banish', target: strong };
-  if (me.coins >= 7 && rnd(s, seat, 1) < 0.9) return { type: 'act', act: 'banish', target: strong };
-  if (has('poisoner') && ok('poison', strong)) return { type: 'act', act: 'poison', target: strong };
+  if (me.coins >= 7 && (stalled || rnd(s, seat, 1) < 0.9)) return { type: 'act', act: 'banish', target: strong };
+  // a long stalemate: save up for a Banish, which nobody can stop
+  if (quiet > 5 * s.players.length + 8) return { type: 'act', act: has('treasurer') ? 'levy' : 'wages' };
+  if (has('poisoner') && ok('poison', strong) && rnd(s, seat, 11) < (stalled ? 0.2 : 1)) return { type: 'act', act: 'poison', target: strong };
   const rich = strongest(s, seat, (i) => s.players[i].coins >= 2);
   if (has('treasurer')) return { type: 'act', act: 'levy' };
-  if (has('smuggler') && rich != null) return { type: 'act', act: 'steal', target: rich };
+  if (has('smuggler') && rich != null && rnd(s, seat, 9) < (stalled ? 0.15 : 0.7)) return { type: 'act', act: 'steal', target: rich };
+  if (stalled && rnd(s, seat, 10) < 0.7) return { type: 'act', act: 'wages' };
 
   // bluff sometimes, preferring the role the table can least disprove
   if (rnd(s, seat, 2) < 0.3) {
@@ -500,7 +511,7 @@ function botReact(s, seat) {
   if (st === 'blockChal') {
     if (!canChallenge(s, seat)) return { type: 'pass' };
     const pHas = chanceHolds(s, seat, p.block.seat, p.block.role);
-    let thr = seat === p.actor ? (p.act === 'poison' ? 0.42 : 0.33) : 0.12;
+    let thr = seat === p.actor ? (p.act === 'poison' ? 0.32 : 0.24) : 0.08;
     if (lives === 1) thr *= 0.6;
     if (pHas < thr || pHas === 0) return { type: 'challenge' };
     return { type: 'pass' };
@@ -514,10 +525,10 @@ function botReact(s, seat) {
 
   if (st === 'act' && canChallenge(s, seat)) {
     const pHas = chanceHolds(s, seat, p.actor, p.role);
-    let thr = 0.22;
-    if (targeted && p.act === 'poison') thr = lives === 1 ? 0.55 : 0.4;
-    else if (targeted) thr = 0.3;
-    else if (lives === 1) thr = 0.1;
+    let thr = 0.18;
+    if (targeted && p.act === 'poison') thr = lives === 1 ? 0.45 : 0.3;
+    else if (targeted) thr = 0.24;
+    else if (lives === 1) thr = 0.08;
     if (p.act === 'levy' && s.players[p.actor].coins >= 5) thr += 0.1;
     if (pHas === 0 || (pHas < thr && rnd(s, seat, 7) < 0.85)) return { type: 'challenge' };
   }

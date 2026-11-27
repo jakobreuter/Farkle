@@ -373,7 +373,7 @@ export function applyAction(state, a, seat, rand) {
 
 function cardValue(s, seat, card, bonus) {
   const p = s.players[seat];
-  let v = card.pts * 4;
+  let v = card.pts * 5;
   const early = p.cards.length < 9 ? 1 : 0.5;
   // bonus colour helps with other visible cards
   let helps = 0;
@@ -460,7 +460,12 @@ export function botAction(s, seat, rnd = Math.random) {
   const room = MAX_GEMS - held;
 
   // 1) buy the best affordable card
-  const buys = affordable(s, seat);
+  const tgt = pickTarget(s, seat, bonus);
+  const buys = affordable(s, seat).filter((b) => {
+    // late in the game, skip cheap pointless cards unless they're what we're saving for
+    const card = CARDS[b.id];
+    return card.pts > 0 || p.cards.length < 8 || (tgt && tgt.id === b.id) || cardValue(s, seat, card, bonus) >= 4;
+  });
   if (buys.length) {
     let best = null;
     for (const b of buys) {
@@ -474,7 +479,6 @@ export function botAction(s, seat, rnd = Math.random) {
     return Number.isInteger(b.reserve) ? { type: 'buy', reserve: b.reserve } : { type: 'buy', tier: b.tier, slot: b.slot };
   }
 
-  const tgt = pickTarget(s, seat, bonus);
   const reserveOk = canReserve(s, seat);
   const reserveBest = () => {
     let best = null;

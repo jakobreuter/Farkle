@@ -336,7 +336,7 @@ export function applyAction(state, a, seat, rand, now = 0) {
 
   if (a.type === 'flee') {
     if (s.phase !== 'flee') throw new Error('nothing to flee from');
-    if (seat !== s.fleeSeat && !(seat === -1 && now >= s.fleeAt)) throw new Error('not your choice');
+    if (seat !== s.fleeSeat && seat !== -1) throw new Error('not your choice'); // system: timer ran out (tick)
     const holder = s.fleeSeat;
     const go = seat === -1 ? false : !!a.go;
     s.fleeSeat = null;
@@ -356,7 +356,7 @@ export function applyAction(state, a, seat, rand, now = 0) {
 
   // everything else: the current player (system may auto-resolve)
   if (a.type === 'resolve' && seat === -1) {
-    if (s.phase !== 'roll' || !s.rolled || s.rollsLeft > 0 || s.autoAt == null || now < s.autoAt) throw new Error('not yet');
+    if (s.phase !== 'roll' || !s.rolled || s.rollsLeft > 0) throw new Error('not yet'); // tick waits AUTO_MS
   } else if (seat !== s.current) throw new Error('not your turn');
   const p = s.players[s.current];
 

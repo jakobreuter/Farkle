@@ -1,0 +1,273 @@
+/* ---------- Monster Rumble ---------- */
+.rumble {
+  --rb-ds: 46px;
+  --rb-peak1: #6b5a8e;
+  --rb-peak2: #3a2f57;
+  --rb-hp: #e5484d;
+}
+.rumble.game { gap: 10px; }
+.rumble .rumble-table { gap: 8px; }
+.rumble .turn-label { white-space: nowrap; }
+
+/* ---------- arena: Thunder Peak + the ground ---------- */
+.rumble .rumble-arena { display: grid; gap: 8px; }
+.rumble .rumble-peak {
+  position: relative;
+  display: flex; align-items: stretch; gap: 8px;
+  height: 76px;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background:
+    linear-gradient(160deg, transparent 0 55%, rgba(255,255,255,.06) 55% 60%, transparent 60%),
+    radial-gradient(ellipse at 20% 120%, #8b79b8 0%, transparent 60%),
+    linear-gradient(180deg, var(--rb-peak1), var(--rb-peak2));
+  box-shadow: inset 0 0 0 2px rgba(226,167,46,.55), inset 0 -10px 20px rgba(0,0,0,.25), 0 4px 10px rgba(0,0,0,.3);
+}
+.rumble .rumble-peaktag {
+  flex: none; width: 62px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; font-size: .62rem; font-weight: 900; letter-spacing: .5px; line-height: 1.1;
+  text-transform: uppercase; color: var(--accent);
+}
+.rumble .rumble-mtn { font-size: 1.6rem; line-height: 1; margin-bottom: 2px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.4)); }
+.rumble .rumble-peakslot { flex: 1; min-width: 0; display: flex; align-items: center; }
+.rumble .rumble-empty { flex: 1; text-align: center; font-size: .78rem; opacity: .8; font-style: italic; padding: 0 6px; }
+
+.rumble .rumble-ground { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.rumble .rumble-ground[data-n="1"] { grid-template-columns: minmax(0, 1fr); }
+.rumble .rumble-ground[data-n="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rumble .rumble-ground[data-n="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rumble .rumble-ground[data-n="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.rumble .rumble-ground[data-n="6"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+/* ---------- monster tiles ---------- */
+.rumble .rumble-mon {
+  position: relative;
+  min-width: 0;
+  height: 84px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: 4px 4px 5px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.22);
+  border: 2px solid rgba(255,255,255,.12);
+  cursor: pointer;
+  transition: border-color .4s, background .4s, opacity .4s, box-shadow .4s;
+}
+.rumble .rumble-mon.rumble-cur { border-color: var(--accent); background: rgba(226,167,46,.16); box-shadow: 0 0 14px rgba(226,167,46,.35); }
+.rumble .rumble-mon.rumble-ko { opacity: .45; filter: grayscale(1); }
+.rumble .rumble-mon.rumble-away .rumble-nm { opacity: .6; }
+.rumble .rumble-mon.rumble-deciding { animation: rumbleWorry 1s ease-in-out infinite; }
+.rumble .rumble-mon.rumble-win { border-color: var(--accent); box-shadow: 0 0 20px var(--accent); }
+.rumble .rumble-ava { font-size: 1.65rem; line-height: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+.rumble .rumble-info { width: 100%; min-width: 0; display: grid; gap: 2px; justify-items: center; }
+.rumble .rumble-nm { width: 100%; font-size: .7rem; font-weight: 800; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rumble .rumble-hp { position: relative; width: 100%; height: 13px; border-radius: 7px; background: rgba(0,0,0,.35); overflow: hidden; }
+.rumble .rumble-hp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(180deg, #ff7b7f, var(--rb-hp)); transition: width .5s ease; }
+.rumble .rumble-hp b { position: relative; display: block; text-align: center; font-size: .62rem; line-height: 13px; font-weight: 800; text-shadow: 0 1px 1px rgba(0,0,0,.6); }
+.rumble .rumble-st { display: flex; gap: 4px; justify-content: center; font-size: .64rem; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rumble .rumble-cv { opacity: .75; }
+
+/* the Peak holder: wide, horizontal */
+.rumble .rumble-mon.rumble-onpeak {
+  flex: 1; height: 100%;
+  flex-direction: row; gap: 10px; justify-content: flex-start;
+  padding: 4px 10px;
+  background: rgba(0,0,0,.25);
+  border-color: rgba(226,167,46,.6);
+}
+.rumble .rumble-mon.rumble-onpeak.rumble-cur { border-color: var(--accent); background: rgba(226,167,46,.2); }
+.rumble .rumble-onpeak .rumble-ava { font-size: 2.3rem; }
+.rumble .rumble-onpeak .rumble-info { justify-items: start; flex: 1; }
+.rumble .rumble-onpeak .rumble-nm { font-size: .88rem; text-align: left; }
+.rumble .rumble-onpeak .rumble-hp { height: 15px; }
+.rumble .rumble-onpeak .rumble-hp b { font-size: .7rem; line-height: 15px; }
+.rumble .rumble-onpeak .rumble-st { font-size: .78rem; gap: 8px; }
+
+.rumble .rumble-mon.rumble-hit { animation: rumbleHit .6s ease; }
+@keyframes rumbleHit {
+  0% { transform: translateX(0); }
+  12% { transform: translateX(-6px) rotate(-3deg); background: rgba(229,72,77,.55); }
+  28% { transform: translateX(6px) rotate(3deg); }
+  44% { transform: translateX(-4px) rotate(-2deg); }
+  60% { transform: translateX(3px); }
+  100% { transform: none; }
+}
+@keyframes rumbleWorry { 0%, 100% { box-shadow: 0 0 0 0 rgba(229,72,77,.0); } 50% { box-shadow: 0 0 0 4px rgba(229,72,77,.7); } }
+
+/* floating numbers */
+.rumble .rumble-pops { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 3; }
+.rumble .rumble-pop {
+  position: absolute; left: 50%; top: 28%;
+  transform: translate(-50%, 0);
+  font-weight: 900; font-size: 1.05rem; white-space: nowrap;
+  text-shadow: 0 2px 0 rgba(0,0,0,.55), 0 0 6px rgba(0,0,0,.5);
+  opacity: 0;
+  animation: rumbleFloat 1.35s cubic-bezier(.2,.8,.3,1) both;
+  animation-delay: calc(var(--k, 0) * 160ms);
+}
+.rumble .rumble-pdmg { color: #ff5d5d; font-size: 1.45rem; }
+.rumble .rumble-pheal { color: #7dff9e; }
+.rumble .rumble-pstar { color: #ffd84a; }
+.rumble .rumble-pen { color: #7fd8ff; }
+.rumble .rumble-pnote { color: #fff; font-size: .8rem; background: rgba(0,0,0,.55); padding: 2px 8px; border-radius: 999px; text-shadow: none; }
+@keyframes rumbleFloat {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(.5); }
+  18% { opacity: 1; transform: translate(-50%, -6px) scale(1.2); }
+  70% { opacity: 1; transform: translate(-50%, -26px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -40px) scale(.95); }
+}
+
+/* ---------- dice ---------- */
+.rumble .rumble-tray { height: 64px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.rumble .rumble-tray.rumble-seven { gap: 5px; --rb-ds: 42px; }
+.rumble .rumble-die {
+  position: relative; flex: none;
+  width: var(--rb-ds); height: var(--rb-ds);
+  border-radius: 11px;
+  display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 28%, #fff, var(--die) 60%, var(--die-edge));
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.14), 0 3px 6px rgba(0,0,0,.35);
+  color: #222;
+  transition: transform .2s, opacity .3s, filter .3s;
+}
+.rumble .rumble-dsym { font-size: calc(var(--rb-ds) * .52); font-weight: 900; line-height: 1; }
+.rumble .rumble-die.rumble-fn1, .rumble .rumble-die.rumble-fn2, .rumble .rumble-die.rumble-fn3 { color: #2b2b2b; }
+.rumble .rumble-die.rumble-fn3 { color: #6a3fb0; }
+.rumble .rumble-die.rumble-fen { background: radial-gradient(circle at 35% 28%, #fffbe0, #ffe27a 70%, #e0b93a); }
+.rumble .rumble-die.rumble-fhp { background: radial-gradient(circle at 35% 28%, #fff0f2, #ffc2cb 70%, #e8909e); }
+.rumble .rumble-die.rumble-fcl { background: radial-gradient(circle at 35% 28%, #ffe9dc, #ffb08a 70%, #e07a4c); }
+.rumble .rumble-die.rumble-fen .rumble-dsym, .rumble .rumble-die.rumble-fhp .rumble-dsym, .rumble .rumble-die.rumble-fcl .rumble-dsym { font-size: calc(var(--rb-ds) * .48); }
+.rumble .rumble-die.rumble-tap { cursor: pointer; }
+.rumble .rumble-die.rumble-kept { transform: translateY(-5px); }
+.rumble .rumble-die.rumble-kept::after {
+  content: "KEEP"; position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%);
+  font-size: .55rem; font-weight: 900; letter-spacing: 1px; color: var(--accent);
+}
+.rumble .rumble-die.rumble-kept::before {
+  content: ""; position: absolute; inset: -4px; border-radius: 14px;
+  border: 3px solid var(--accent); box-shadow: 0 0 12px var(--accent); pointer-events: none;
+}
+.rumble .rumble-die.rumble-dim { opacity: .5; }
+.rumble .rumble-die.rumble-used { opacity: .72; filter: saturate(.7); }
+.rumble .rumble-die.rumble-rolling { animation: rumbleTumble .95s cubic-bezier(.25,.6,.35,1) var(--rdl, 0ms) both; }
+.rumble .rumble-die.rumble-shaking { animation: rumbleShake .16s infinite; }
+@keyframes rumbleTumble {
+  0% { transform: translate(var(--rdx), -46px) rotate(-200deg) scale(1.15); }
+  35% { transform: translate(calc(var(--rdx) * .4), 0) rotate(-40deg) scale(1); }
+  55% { transform: translate(calc(var(--rdx) * .15), -14px) rotate(20deg); }
+  75% { transform: translate(0, 0) rotate(-6deg); }
+  88% { transform: translate(0, -3px) rotate(2deg); }
+  100% { transform: none; }
+}
+@keyframes rumbleShake {
+  0% { transform: translate(-2px, 1px) rotate(-7deg); }
+  50% { transform: translate(2px, -2px) rotate(7deg); }
+  100% { transform: translate(-2px, 1px) rotate(-7deg); }
+}
+
+/* ---------- banners ---------- */
+.rumble .banner.rumble-bpeak, .rumble .banner.rumble-bko {
+  font-size: clamp(1.2rem, 5.4vw, 2rem); letter-spacing: .5px;
+  white-space: normal; text-align: center; width: max-content; max-width: 92%;
+  top: 30%; padding: 10px 18px;
+}
+.rumble .banner.rumble-bpeak { background: linear-gradient(180deg, #ffd25e, var(--accent)); color: var(--accent-ink); border: 3px solid #fff3c4; }
+.rumble .banner.rumble-bko { background: var(--danger); color: #fff; }
+
+/* ---------- power shop ---------- */
+.rumble .rumble-shop {
+  background: linear-gradient(180deg, var(--felt-dark), #0f3d28);
+  border: 2px solid rgba(226,167,46,.35);
+  border-radius: 16px;
+  padding: 8px 10px 10px;
+  color: #fff;
+  display: grid; gap: 8px;
+}
+.rumble .rumble-shophead { display: flex; align-items: center; gap: 8px; height: 34px; }
+.rumble .rumble-shoptitle { font-weight: 900; font-size: .95rem; letter-spacing: .3px; }
+.rumble .rumble-myen { flex: 1; font-size: .85rem; font-weight: 700; color: #bfe9ff; white-space: nowrap; }
+.rumble .rumble-sweep { min-height: 34px; background: rgba(255,255,255,.14); color: #fff; }
+.rumble .rumble-market { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.rumble .rumble-pc {
+  font: inherit; text-align: left; color: var(--ink);
+  height: 132px; min-width: 0;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 6px 7px;
+  border-radius: 11px;
+  border: 0;
+  background: var(--card);
+  box-shadow: inset 0 0 0 2px #8ccfc0, 0 3px 8px rgba(0,0,0,.35);
+  cursor: pointer;
+  transition: transform .15s, box-shadow .2s, opacity .2s;
+  overflow: hidden;
+}
+.rumble .rumble-pc.rumble-now { box-shadow: inset 0 0 0 2px #f0a868, 0 3px 8px rgba(0,0,0,.35); }
+.rumble .rumble-pc.rumble-picked { transform: translateY(-4px); box-shadow: 0 0 0 3px var(--accent), 0 6px 14px rgba(0,0,0,.45); }
+.rumble .rumble-pc.rumble-cant { opacity: .55; }
+.rumble .rumble-pc.rumble-none { cursor: default; align-items: center; justify-content: center; text-align: center; color: var(--muted); font-size: .78rem; background: rgba(255,250,240,.35); }
+.rumble .rumble-pchead { display: flex; align-items: center; justify-content: space-between; }
+.rumble .rumble-pcicon { font-size: 1.45rem; line-height: 1; }
+.rumble .rumble-pccost { font-weight: 900; font-size: .8rem; background: #1e3b5c; color: #ffe27a; border-radius: 999px; padding: 2px 7px; }
+.rumble .rumble-pcname { font-weight: 900; font-size: .76rem; line-height: 1.1; }
+.rumble .rumble-pctext { font-size: .68rem; line-height: 1.22; color: #3d3a33; flex: 1; overflow: hidden; }
+.rumble .rumble-pckind { font-size: .56rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #2f8c78; }
+.rumble .rumble-now .rumble-pckind { color: #c46a1c; }
+.rumble .rumble-mine {
+  font: inherit; font-size: .8rem; font-weight: 700; color: #fff;
+  min-height: 36px; padding: 6px 10px; border-radius: 10px; border: 1px dashed rgba(255,255,255,.3);
+  background: rgba(0,0,0,.18); text-align: left; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---------- monster sheet ---------- */
+.rumble .rumble-sheetbg { position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; }
+.rumble .rumble-sheet {
+  width: min(560px, 100%);
+  max-height: 75vh; overflow-y: auto;
+  background: var(--card); color: var(--ink);
+  border-radius: 18px 18px 0 0;
+  padding: 14px 14px calc(16px + env(safe-area-inset-bottom));
+  display: grid; gap: 10px;
+  box-shadow: 0 -10px 30px rgba(0,0,0,.4);
+  animation: rumbleUp .25s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes rumbleUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.rumble .rumble-sheethead { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 1.05rem; }
+.rumble .rumble-sheethead b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rumble .rumble-sheethead small { font-weight: 600; color: var(--muted); }
+.rumble .rumble-close { min-height: 36px; }
+.rumble .rumble-sheetstats { font-weight: 700; font-size: .92rem; }
+.rumble .rumble-sheetcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+.rumble .rumble-sheetcards .rumble-pc { cursor: default; height: 128px; }
+.rumble .rumble-nocards { color: var(--muted); font-size: .9rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rumble .rumble-die.rumble-rolling, .rumble .rumble-die.rumble-shaking, .rumble .rumble-mon.rumble-hit { animation: none; }
+}
+
+/* ---------- phones ---------- */
+@media (max-width: 600px) {
+  .rumble { --rb-ds: 44px; }
+  .rumble.game { gap: 8px; }
+  .rumble .rumble-table { padding: 8px 8px; gap: 6px; }
+  .rumble .rumble-peak { height: 70px; padding: 5px 6px; gap: 6px; }
+  .rumble .rumble-peaktag { width: 50px; font-size: .56rem; }
+  .rumble .rumble-mtn { font-size: 1.35rem; }
+  .rumble .rumble-ground { gap: 5px; }
+  .rumble .rumble-mon { height: 80px; padding: 3px 3px 4px; border-radius: 10px; }
+  .rumble .rumble-ava { font-size: 1.45rem; }
+  .rumble .rumble-nm { font-size: .66rem; }
+  .rumble .rumble-st { font-size: .6rem; gap: 3px; }
+  .rumble .rumble-ground[data-n="5"] .rumble-cv, .rumble .rumble-ground[data-n="6"] .rumble-cv { display: none; }
+  .rumble .rumble-onpeak .rumble-ava { font-size: 2rem; }
+  .rumble .rumble-tray { height: 60px; gap: 6px; }
+  .rumble .rumble-tray.rumble-seven { gap: 4px; --rb-ds: 40px; }
+  .rumble .sel-line { font-size: .8rem; }
+  .rumble .hint { font-size: .8rem; }
+  .rumble .btn.big { padding: 12px 6px; }
+  .rumble .rumble-shop { padding: 6px 8px 8px; gap: 6px; }
+  .rumble .rumble-market { gap: 6px; }
+  .rumble .rumble-pc { height: 128px; padding: 5px 6px; }
+  .rumble .rumble-pcname { font-size: .72rem; }
+  .rumble .rumble-pctext { font-size: .64rem; }
+}
