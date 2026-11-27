@@ -16,15 +16,15 @@ export const TYPES = {
   popcorn: { name: 'Popcorn', emoji: '🍿', n: 14, short: '3 = 10', rule: 'Every set of 3 scores 10.' },
   pretzel: { name: 'Pretzel', emoji: '🥨', n: 14, short: '2 = 5', rule: 'Every pair scores 5.' },
   taco: { name: 'Taco', emoji: '🌮', n: 14, short: '1·3·5·8·12', rule: '1/2/3/4/5 tacos score 1/3/5/8/12 (+3 per taco after 5).' },
-  soda: { name: 'Soda', emoji: '🥤', n: 13, short: 'most 6/3', rule: 'Most sodas this round: 6. Second most: 3. Ties split the prize (rounded down); a tie for most means no second prize.' },
+  soda: { name: 'Soda', emoji: '🥤', n: 13, short: 'most: 6', rule: 'Most sodas this round: 6. Second most: 3. Ties split the prize (rounded down); a tie for most means no second prize.' },
   bites: { name: 'Bites', emoji: '🍔', n: 16, short: '1–3 pts', rule: 'Corn dog 🌭 1, Burger 🍔 2, Pizza 🍕 3 points.' },
-  hotsauce: { name: 'Hot Sauce', emoji: '🌶️', n: 7, short: 'next bite ×3', rule: 'The next Bite you take scores triple. Unused sauce scores 0.' },
-  donut: { name: 'Donut', emoji: '🍩', n: 10, short: '+1 per kind', rule: '1 point for each different kind of card on your table this round (itself included).' },
-  broccoli: { name: 'Broccoli', emoji: '🥦', n: 11, short: '−2 · 3+ = +4', rule: '−2 each… but with 3 or more, every broccoli scores +4 instead!' },
+  hotsauce: { name: 'Hot Sauce', emoji: '🌶️', n: 7, short: 'bite ×3', rule: 'The next Bite you take scores triple. Unused sauce scores 0.' },
+  donut: { name: 'Donut', emoji: '🍩', n: 10, short: '+1/kind', rule: '1 point for each different kind of card on your table this round (itself included).' },
+  broccoli: { name: 'Broccoli', emoji: '🥦', n: 11, short: '3+ = +4 ea', rule: '−2 each… but with 3 or more, every broccoli scores +4 instead!' },
   pickle: { name: 'Pickle', emoji: '🥒', n: 10, short: 'lone = 5', rule: 'Exactly one pickle scores 5. Two or more score just 1 each.' },
   leftovers: { name: 'Leftovers', emoji: '🥡', n: 8, short: 'copy last', rule: 'Becomes a copy of the card you took just before it this round (nothing if it is your first).' },
-  cupcake: { name: 'Cupcake', emoji: '🧁', n: 12, short: 'end: most +8', rule: 'Kept until the end. Most cupcakes: +8. Fewest: −4 (not with 2 players). Ties share.' },
-  fortune: { name: 'Fortune Cookie', emoji: '🥠', n: 11, short: 'end: 2·5·9·14·20', rule: 'Kept until the end. 1/2/3/4/5 cookies score 2/5/9/14/20 (+6 per cookie after 5).' },
+  cupcake: { name: 'Cupcake', emoji: '🧁', n: 12, short: 'end: most', rule: 'Kept until the end. Most cupcakes: +8. Fewest: −4 (not with 2 players). Ties share.' },
+  fortune: { name: 'Fortune Cookie', card: 'Fortune', emoji: '🥠', n: 11, short: 'end: set', rule: 'Kept until the end. 1/2/3/4/5 cookies score 2/5/9/14/20 (+6 per cookie after 5).' },
 };
 export const TYPE_IDS = Object.keys(TYPES);
 export const BITES = { bite1: { name: 'Corn Dog', emoji: '🌭', v: 1, n: 5 }, bite2: { name: 'Burger', emoji: '🍔', v: 2, n: 7 }, bite3: { name: 'Pizza', emoji: '🍕', v: 3, n: 4 } };
@@ -36,6 +36,8 @@ export const handSize = (n) => ({ 2: 10, 3: 9, 4: 8, 5: 7 }[n] ?? 7);
 /** card key -> type id ('bite2' -> 'bites') */
 export const typeOf = (k) => (k in BITES ? 'bites' : k);
 export const cardName = (k) => (BITES[k] ? BITES[k].name : TYPES[k]?.name ?? k);
+/** shorter name for the face of a card */
+export const cardLabel = (k) => TYPES[k]?.card ?? cardName(k);
 export const cardEmoji = (k) => (BITES[k] ? BITES[k].emoji : TYPES[k]?.emoji ?? '?');
 
 /**
@@ -109,7 +111,7 @@ export function place(table, k) {
   if (k === 'leftovers') {
     lo = true;
     const prev = t[t.length - 1];
-    if (!prev) { t.push({ k: 'leftovers', dud: true }); return t; }
+    if (!prev || prev.dud) { t.push({ k: 'leftovers', dud: true }); return t; }
     key = prev.k;
   }
   const e = { k: key };
@@ -346,7 +348,7 @@ function potential(k, table, left, menu, s, seat) {
     case 'broccoli': return n === 1 ? 3.5 * f(6) : n === 2 ? 9 * f(3) : 0;
     case 'leftovers': {
       const prev = table[table.length - 1];
-      return prev ? potential(prev.k, table, left, menu, s, seat) : 0;
+      return prev && !prev.dud ? potential(prev.k, table, left, menu, s, seat) : 0;
     }
     case 'cupcake': case 'fortune': {
       // end-of-game value: actual change in end scores, faded in as the game progresses

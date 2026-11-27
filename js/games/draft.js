@@ -110,7 +110,7 @@ export default {
     let selKey = ''; // the hand the selection belongs to
     let sent = 0;
     let handKey = '';
-    let seatKey = '';
+    let mineHTML = null;
     let menuKey = '';
     let sheetKey = '';
     let sheetClosed = '';
@@ -157,7 +157,7 @@ export default {
     function cardHTML(k, i, extra = '') {
       const t = D.typeOf(k);
       return `<button class="sd-card sdt-${t} ${extra}" data-i="${i}" style="--d:${i * 40}ms" aria-label="${esc(D.cardName(k))}">
-        <span class="sd-em">${D.cardEmoji(k)}</span><span class="sd-nm">${esc(D.cardName(k))}</span><span class="sd-sh">${esc(shortOf(k))}</span></button>`;
+        <span class="sd-em">${D.cardEmoji(k)}</span><span class="sd-nm">${esc(D.cardLabel(k))}</span><span class="sd-sh">${esc(shortOf(k))}</span></button>`;
     }
 
     function summaryLine(p) {
@@ -203,7 +203,6 @@ export default {
         const sumHTML = summaryLine(p);
         if (sum.innerHTML !== sumHTML) sum.innerHTML = sumHTML;
       });
-      seatKey = '';
     }
 
     function renderHand() {
@@ -266,8 +265,8 @@ export default {
           <b class="sd-gpts">${pts == null ? '' : pts}</b></div>`;
       }).join('') : `<div class="sd-none">${state.phase === 'pick' || state.phase === 'menu' || state.phase === 'deal' ? 'Pick a card — it lands here.' : 'Table cleared.'}</div>`;
       const box = q('.sd-groups');
-      if (box.dataset.h !== html) {
-        box.dataset.h = html;
+      if (mineHTML !== html) {
+        mineHTML = html;
         box.innerHTML = html;
         if (state.phase === 'reveal') {
           const last = p.table[p.table.length - 1];
