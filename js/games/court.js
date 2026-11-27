@@ -191,7 +191,7 @@ export default {
       const others = state.players.map((_, i) => i).filter((i) => i !== seat);
       const box = q('.ci-rivals');
       if (box.children.length !== others.length) {
-        box.innerHTML = others.map(() => `<button class="ci-rival" data-a="target"><span class="ci-rname"><span class="nm"></span><span class="ci-rcoins"></span></span><span class="ci-rcards"></span><span class="ci-rtag"></span></button>`).join('');
+        box.innerHTML = others.map(() => `<button class="ci-rival" data-a="target"><span class="ci-rname"><span class="nm"></span><span class="ci-rcoins"></span></span><span class="ci-rrow"><span class="ci-rcards"></span><span class="ci-rtag"></span></span></button>`).join('');
         box.dataset.n = String(others.length);
       }
       const P = state.pending;
@@ -223,9 +223,9 @@ export default {
         if (cards.dataset.k !== key) { cards.dataset.k = key; cards.innerHTML = p.cards.map(mini).join(''); }
         let tag = '';
         if (out) tag = 'out';
-        else if (state.phase === 'react' && wait.includes(i)) tag = 'deciding…';
-        else if (state.phase === 'react' && P.passed.includes(i)) tag = 'lets it go';
-        else if (state.phase === 'lose' && state.lose.seat === i) tag = 'choosing…';
+        else if (state.phase === 'react' && wait.includes(i)) tag = '⏳';
+        else if (state.phase === 'react' && P.passed.includes(i)) tag = 'pass';
+        else if (state.phase === 'lose' && state.lose.seat === i) tag = '⏳';
         else if (!api.isAlive(p.pid)) tag = 'away';
         c.querySelector('.ci-rtag').textContent = tag;
       });
@@ -431,9 +431,9 @@ export default {
       let hint = '';
       const me = meP();
       if (s.phase === 'turn' && s.current === seat && !sent) {
-        hint = picking ? 'Tap a rival (or Cancel).' : 'Claim any role — bluffing is allowed. ✓ marks roles you hold.';
+        hint = picking ? 'Tap a rival, or Cancel.' : 'Bluffing is allowed · ✓ = a role you hold';
       } else if (s.phase === 'react' && C.waitingOn(s).includes(seat)) {
-        hint = s.pending.target === seat ? 'This is aimed at you!' : 'Think they’re bluffing? Challenge before the timer runs out.';
+        hint = s.pending.target === seat ? 'This is aimed at you!' : 'Smell a bluff? Challenge before time runs out.';
       } else if (s.phase === 'lose' && s.lose.seat === seat) hint = 'Tap the card you’ll give up.';
       else if (s.phase === 'turn' && me && C.isIn(s, seat) && !api.isAlive(s.players[s.current].pid)) hint = `Waiting for ${s.players[s.current].name} to come back…`;
       q('.ci-hint').textContent = hint;
@@ -446,7 +446,6 @@ export default {
       const seat = mySeat();
       if (f.kind === 'proved') banner(B, f.seat === seat ? 'TRUE!' : 'NO BLUFF!', 'bank', 1500);
       else if (f.kind === 'caught') banner(B, f.seat === seat ? 'CAUGHT!' : 'BLUFF!', 'farkle', 1500);
-      else if (f.kind === 'block') banner(B, 'BLOCKED?', 'hot', 1000);
       else if (f.kind === 'out' && next.phase !== 'over') banner(B, f.seat === seat ? 'YOU’RE OUT' : `${next.players[f.seat].name.toUpperCase()} OUT`, 'farkle', 1600);
     }
 

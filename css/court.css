@@ -21,7 +21,7 @@
 .court .ci-rivals[data-n="2"], .court .ci-rivals[data-n="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .court .ci-rival {
   font: inherit; color: #fff; text-align: left; cursor: default;
-  height: 64px; min-width: 0; padding: 4px 7px;
+  height: 58px; min-width: 0; padding: 4px 7px;
   background: rgba(0, 0, 0, .2);
   border: 2px solid transparent; border-radius: 12px;
   display: flex; flex-direction: column; gap: 2px;
@@ -41,8 +41,9 @@
 .court .ci-rcoins { flex: none; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; }
 .court .ci-rcoins.bump, .court .ci-purse-n.bump { animation: ciBump .6s ease; }
 @keyframes ciBump { 30% { transform: scale(1.35); color: var(--accent); } }
-.court .ci-rcards { display: flex; gap: 4px; height: 26px; align-items: center; }
-.court .ci-rtag { font-size: .66rem; opacity: .75; height: 1.1em; line-height: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+.court .ci-rrow { display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1; }
+.court .ci-rcards { display: flex; gap: 4px; height: 26px; align-items: center; flex: none; }
+.court .ci-rtag { flex: 1; min-width: 0; text-align: right; font-size: .68rem; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
 
 /* mini cards (rivals) */
 .court .ci-mini {
@@ -130,9 +131,9 @@
 /* controls: fixed height */
 .court .ci-controls { height: 104px; }
 .court .ci-note { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; opacity: .8; font-size: .92rem; font-style: italic; }
-.court .ci-acts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; height: 100%; }
+.court .ci-acts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 6px; height: 100%; }
 .court .ci-act {
-  font: inherit; cursor: pointer; min-width: 0; padding: 2px;
+  font: inherit; cursor: pointer; min-width: 0; min-height: 0; padding: 2px; overflow: hidden;
   border: 0; border-radius: 10px;
   background: #f3eee1; color: var(--ink);
   display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1;
@@ -143,10 +144,10 @@
 .court .ci-act.mine { background: #fff7dc; }
 .court .ci-act:active:not(:disabled) { transform: translateY(1px) scale(.97); }
 .court .ci-act:disabled { opacity: .38; cursor: not-allowed; }
-.court .ci-act-ic { font-size: 1.05rem; }
-.court .ci-act-l { font-weight: 800; font-size: .82rem; }
-.court .ci-act-s { font-size: .66rem; color: var(--muted); white-space: nowrap; }
-.court .ci-reacts { display: grid; gap: 7px; height: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.court .ci-act-ic { font-size: .95rem; line-height: 1.1; }
+.court .ci-act-l { font-weight: 800; font-size: .8rem; }
+.court .ci-act-s { font-size: .64rem; color: var(--muted); white-space: nowrap; }
+.court .ci-reacts { display: grid; gap: 7px; height: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
 .court .ci-reacts.n1 { grid-template-columns: minmax(0, 1fr); }
 .court .ci-reacts.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .court .ci-reacts.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -160,7 +161,7 @@
 .court .ci-tbtn span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .court .ci-tbtn small { font-size: .64rem; font-weight: 600; opacity: .75; }
 .court .ci-cancel { color: #fff; }
-.court .ci-hint { height: 1.3em; font-size: .82rem; white-space: nowrap; }
+.court .ci-hint { height: 1.3em; font-size: .82rem; white-space: nowrap; display: block; text-overflow: ellipsis; }
 
 /* spymaster swap sheet */
 .court .ci-sheet-bg { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); z-index: 25; display: flex; align-items: flex-end; justify-content: center; }
@@ -189,7 +190,7 @@
 
 @media (max-width: 600px) {
   .court .ci-table { gap: 7px; }
-  .court .ci-rival { height: 60px; padding: 3px 6px; }
+  .court .ci-rival { height: 54px; padding: 3px 6px; }
   .court .ci-stage { height: 62px; }
   .court .ci-claim { font-size: .9rem; }
   .court .ci-sub { font-size: .8rem; }
