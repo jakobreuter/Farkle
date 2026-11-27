@@ -29,15 +29,25 @@ function blank(n = 3) {
   s.phase = 'main'; s.current = 0; s.roadHolder = -1; s.armyHolder = -1;
   return s;
 }
-const path = (from, len) => { // a simple chain of edges, returns { verts, edges }
-  const verts = [from]; const edges = [];
-  while (edges.length < len) {
+// a simple chain of `len` edges starting at `from` (depth-first search)
+function path(from, len) {
+  const verts = [from];
+  const edges = [];
+  const go = () => {
+    if (edges.length === len) return true;
     const v = verts[verts.length - 1];
-    const e = H.VERTS[v].e.find((x) => !edges.includes(x) && !verts.includes(H.otherEnd(x, v)));
-    edges.push(e); verts.push(H.otherEnd(e, v));
-  }
+    for (const e of H.VERTS[v].e) {
+      const u = H.otherEnd(e, v);
+      if (verts.includes(u)) continue;
+      verts.push(u); edges.push(e);
+      if (go()) return true;
+      verts.pop(); edges.pop();
+    }
+    return false;
+  };
+  assert.ok(go());
   return { verts, edges };
-};
+}
 
 test('geometry: 19 tiles, 54 corners, 72 edges, 30 coast edges, 9 harbors', () => {
   assert.equal(H.TILES.length, 19);
@@ -155,7 +165,7 @@ test('rolling 7: discards half (simultaneous) then storm move and steal', () => 
   assert.equal(m.players[0].hand[4], n.players[0].hand[4] + 1, '5th card is ore');
   assert.equal(m.phase, 'main');
   assert.equal(m.ev.kind, 'steal');
-  assert.ok(!m.log.at(-1).includes('Ore'), 'log does not reveal the stolen card');
+  assert.ok(!m.log.at(-1).includes('🪨'), 'log does not reveal the stolen card');
 });
 
 test('building: costs, distance rule, road connection, city upgrade, piece limits', () => {
@@ -284,35 +294,42 @@ test('discovery cards: buy, wait a turn, one per turn; each card works', () => {
 
 test('longest road: 5+ needed, ties keep the holder, an opponent village cuts it', () => {
   let s = blank(2);
-  const { verts, edges } = path(0, 7);
+  const { verts, edges } = path(0, 6);
   s.bo[verts[0]] = 0; s.bl[verts[0]] = 1;
   s.players[0].hand = [10, 10, 0, 0, 0];
   for (let i = 0; i < 4; i++) s = act(s, { type: 'road', e: edges[i] }, 0);
   assert.equal(H.longestRoad(s, 0), 4);
   assert.equal(s.roadHolder, -1);
   s = act(s, { type: 'road', e: edges[4] }, 0);
+  assert.equal(H.longestRoad(s, 0), 5);
   assert.equal(s.roadHolder, 0);
   assert.equal(H.points(s, 0), 3);
   // a branch doesn't add length
-  const branch = H.VERTS[verts[2]].e.find((e) => !edges.includes(e));
+  const branch = H.VERTS[verts[2]].e.find((e) => !edges.includes(e) && s.roads[e] < 0);
   if (branch != null) { s = act(s, { type: 'road', e: branch }, 0); assert.equal(H.longestRoad(s, 0), 5); }
-  // opponent builds a village in the middle (simulated) -> trail cut
+  // seat 1 ties with 5: the holder keeps it
+  let tieChecked = false;
+  const far = path(53, 5);
   const t = structuredClone(s);
-  t.bo[verts[3]] = 1; t.bl[verts[3]] = 1;
-  assert.equal(H.longestRoad(t, 0), 3);
-  // award transfers via the engine when seat 1 builds a village that cuts it
-  const u = structuredClone(s);
-  u.current = 1;
-  const side = H.VERTS[verts[3]].e.find((e) => !edges.includes(e) && u.roads[e] < 0);
-  if (side != null) {
-    const far = H.otherEnd(side, verts[3]);
-    if (H.VERTS[far].n.every((x) => u.bo[x] < 0) && u.bo[far] < 0 && H.VERTS[verts[3]].n.every((x) => u.bo[x] < 0)) {
-      u.roads[side] = 1;
-      u.players[1].hand = [1, 1, 1, 1, 0];
-      const w = act(u, { type: 'build', what: 'village', v: verts[3] }, 1);
-      assert.equal(w.roadHolder, -1);
-    }
+  if (far.edges.every((e) => t.roads[e] < 0) && far.verts.every((v) => !verts.includes(v))) {
+    t.current = 1;
+    t.bo[far.verts[0]] = 1; t.bl[far.verts[0]] = 1;
+    t.players[1].hand = [10, 10, 0, 0, 0];
+    let w = t;
+    for (const e of far.edges) w = act(w, { type: 'road', e }, 1);
+    assert.equal(H.longestRoad(w, 1), 5);
+    assert.equal(w.roadHolder, 0, 'tie keeps the holder');
+    tieChecked = true;
   }
+  assert.ok(tieChecked, 'tie case ran');
+  // an opponent village in the middle cuts the trail -> award lost
+  const u = structuredClone(s);
+  u.bo[verts[3]] = 1; u.bl[verts[3]] = 1;
+  assert.equal(H.longestRoad(u, 0), 3);
+  u.current = 1; u.players[1].hand = [1, 1, 0, 0, 0];
+  const r1 = H.legalRoads(u, 1)[0];
+  const w = act(u, { type: 'road', e: r1 }, 1);
+  assert.equal(w.roadHolder, -1);
 });
 
 test('win: reaching the target on your turn ends the game (hidden points count)', () => {

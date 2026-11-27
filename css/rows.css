@@ -216,3 +216,18 @@
   .rows .rows-pens::before { content: "Pen."; }
   .rows .banner { letter-spacing: 1px; }
 }
+
+/* very narrow phones (e.g. iPhone SE, 320px) */
+@media (max-width: 360px) {
+  .rows .rows-line { grid-template-columns: repeat(11, minmax(0, 1fr)) 16px; gap: 1.5px; }
+  .rows .rows-lockbox { width: 16px; font-size: .6rem; }
+  .rows .rows-box { font-size: .82rem; }
+  .rows .rows-box.rows-x::after, .rows .rows-box.rows-pick::after { font-size: 1.3rem; }
+  .rows .rows-pens::before { content: none; }
+  .rows .rows-pen { width: 16px; height: 16px; }
+  .rows .rows-break { font-size: .68rem; }
+  .rows .rows-foot { padding: 2px 2px 0; }
+  .rows .rows-opp { gap: 5px; padding: 4px 8px; grid-template-columns: minmax(0, 1fr) auto 2.6em 2.4em; }
+  .rows .rows-chip { width: 20px; }
+  .rows .rows-tray { --size: 36px; gap: 6px; }
+}

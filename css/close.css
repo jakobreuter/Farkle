@@ -4,6 +4,7 @@
 .close .scoreboard .player { padding: 6px 10px; }
 .close .scoreboard .pscore { font-size: 1.35rem; margin: 0; }
 .close .scoreboard .pscore::after { content: ' 🪙'; font-size: .8rem; vertical-align: 2px; }
+.close .scoreboard .player.cc-me:not(.active) { border-color: rgba(255,255,255,.3); }
 .close .cc-table { gap: 8px; overflow: hidden; }
 
 .close .cc-clock { display: flex; align-items: baseline; gap: 4px; }
@@ -208,7 +209,16 @@
 @media (max-width: 600px) {
   .close.game { gap: 8px; }
   .close .scoreboard { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 6px; }
-  .close .scoreboard .player { padding: 4px 8px; border-radius: 10px; }
+  .close .scoreboard .player {
+    padding: 4px 8px; border-radius: 10px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 4px; align-items: baseline;
+  }
+  .close .scoreboard .pname { grid-column: 1; grid-row: 1; }
+  .close .scoreboard .pname .tag { display: none; }
+  .close .scoreboard .pscore { grid-column: 2; grid-row: 1; }
+  .close .scoreboard .pscore::after { content: '🪙'; font-size: .62rem; margin-left: 1px; }
+  .close .scoreboard .psub { grid-column: 1 / -1; grid-row: 2; }
+  .close .scoreboard .bar { display: none !important; }
   .close .scoreboard .pname { font-size: .78rem; }
   .close .scoreboard .pscore { font-size: 1.1rem; }
   .close .scoreboard .psub { font-size: .68rem; }

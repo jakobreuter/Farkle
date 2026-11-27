@@ -200,7 +200,9 @@ export default {
         return `<div class="cc-dot ${j % 2 ? 'dn' : 'up'}" style="left:${x.toFixed(2)}%;--c:${col};animation-delay:${120 + j * 140}ms">
           <i></i><span>${esc(compact(sl.v, cq))}</span></div>`;
       }).join('');
-      q('.cc-zone').style.width = `${(100 / (k + 1)).toFixed(2)}%`;
+      const zone = q('.cc-zone');
+      zone.style.width = k ? `calc(${(100 / (k + 1)).toFixed(2)}% - 12px)` : '100%';
+      zone.innerHTML = k ? 'too<br>high' : '';
       const wrap = q('.cc-slots');
       wrap.classList.toggle('two', s.slots.length <= 4);
       wrap.innerHTML = s.slots.map((sl, i) => {
@@ -340,6 +342,7 @@ export default {
         let sub = '';
         if (s.phase === 'guess') sub = s.guesses[i] != null ? '✓ guessed' : 'thinking…';
         else if (s.phase === 'bet') sub = s.bets[i] != null ? '✓ bets in' : 'betting…';
+        else if (s.phase === 'over') sub = (s.winners || []).includes(i) ? '🏆 winner' : '';
         else if (reveal) {
           const d = s.last.delta[i];
           sub = !counting ? '' : `${d > 0 ? '+' : ''}${d}${s.last.bonus[i] ? (s.last.bonus[i] === C.BULLSEYE ? ' 🎯' : ' ⭐') : ''}`;
@@ -353,6 +356,7 @@ export default {
           sub,
         };
       }));
+      [...q('.scoreboard').children].forEach((c, i) => c.classList.toggle('cc-me', i === seat()));
     }
 
     function renderClock() {

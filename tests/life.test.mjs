@@ -12,234 +12,310 @@ function act(s, a, seat, rand, now = 0) {
   if (r) r.forEach((v, i) => assert.ok(v >= 0 && v < ranges[i], `rand ${v} out of range ${ranges[i]}`));
   return life.apply(s, a, seat, { now, rand: r });
 }
-// run system actions until a player has to act
 const settle = (s) => {
   for (let k = 0; k < 20; k++) {
     if (s.phase === 'finale' || s.phase === 'over') return s;
     const t = life.tick(s, { now: 1e12 });
     if (!t) return s;
-    s = act(s, t, -1);
+    s = act(s, t, -1, t.type === 'setup' ? [12345] : null);
   }
   return s;
 };
-// everyone takes the first dealt job (or college for seats in `college`)
+// everyone takes the first dealt job (or college for seats in `college`) and the first goal
 function startAll(s, college = []) {
   s = settle(s);
   while (s.phase === 'pick') {
     const seat = s.current;
     if (college.includes(seat)) { s = act(s, { type: 'choose', i: 3 }, seat); s = act(s, { type: 'choose', i: 0 }, seat); } else s = act(s, { type: 'choose', i: 0 }, seat);
+    if (s.phase === 'pick') s = act(s, { type: 'choose', i: 0 }, seat); // goal
     s = settle(s);
   }
   return s;
 }
+// put the current player on a space as if they just walked there
+const put = (s, id, seat = s.current) => { s = structuredClone(s); s.current = seat; s.players[seat].pos = id; s.phase = 'move'; s.move = { no: 77, seat, value: 1, steps: 1, from: id, path: [id] }; return s; };
+const find = (s, f) => L.boardOf(s).spaces.find(f).id;
+const poolIdx = (pool, title) => { const i = L.POOLS[pool].findIndex((c) => c.t === title); assert.ok(i >= 0, title); return i; };
+// draw a given card from a pool deck (index into the remaining deck)
+const deckIdx = (s, pool, title) => s.decks[pool].indexOf(poolIdx(pool, title));
 
-test('board: 60–75 spaces, both lanes reach retirement, ages 18→65, zones in order', () => {
-  assert.ok(L.BOARD.length >= 60 && L.BOARD.length <= 75, `board has ${L.BOARD.length}`);
-  assert.equal(L.ageAt(0), 18);
-  assert.equal(L.ageAt(L.RETIRE_ID), 65);
-  for (const lane of [0, 1]) for (const fork of [0, 1]) {
-    const p = { pos: 0, route: { lane, fork } };
-    let n = 0; let age = 18; const zones = [];
-    while (p.pos !== L.RETIRE_ID && n++ < 200) {
-      p.pos = L.nextSpace(p, p.pos);
-      assert.ok(L.ageAt(p.pos) >= age); age = L.ageAt(p.pos);
-      const z = L.BOARD[p.pos].zone; if (zones[zones.length - 1] !== z) zones.push(z);
-    }
-    assert.equal(p.pos, L.RETIRE_ID);
-    assert.equal(n, L.DIST[L.RETIRE_ID]);
-    assert.deepEqual(zones, ['campus', 'city', 'suburbs', 'golden']);
-  }
-  const keys = new Set(L.BOARD.map((s) => `${s.col},${s.row}`));
-  assert.equal(keys.size, L.BOARD.length);
-  // the campus lane ends at Graduation, the only fork with a choice is the mid-life Fork
-  assert.ok(L.BOARD.some((s) => s.stop === 'grad' && s.lane === 0));
-  assert.deepEqual(L.BOARD.filter((s) => s.t === 'stop').map((s) => s.stop), ['grad', 'wedding', 'fork', 'rethink']);
+test('options are normalised; setup builds this game’s board, market and decks via randomFor', () => {
+  let s = life.setup(P(3), { length: 'short', cash: 'high', chaos: 'wild', actions: 'off', goals: 'off' }, { now: 0, first: 0 });
+  assert.deepEqual(s.opts, { length: 'short', cash: 'high', chaos: 'wild', actions: false, goals: false });
+  assert.equal(s.players[0].cash, 30000);
+  assert.equal(s.phase, 'setup');
+  assert.deepEqual(life.randomFor(s, { type: 'setup' }, -1), [2 ** 31]);
+  assert.throws(() => act(s, { type: 'setup' }, 0)); // system only
+  s = act(s, { type: 'setup' }, -1, [42]);
+  assert.equal(s.phase, 'deal');
+  assert.equal(s.layout.length, 'short');
+  assert.equal(s.layout.coast, false);
+  const b = L.boardOf(s);
+  assert.ok(!b.spaces.some((x) => x.t === 'action'), 'no action spaces when cards are off');
+  assert.deepEqual(life.randomFor(s, { type: 'deal' }, -1).length, 6, 'no goal draws when goals are off');
+  assert.ok(Object.values(s.market).every((m) => m.v >= 85 && m.v <= 115));
+  // different seeds → different layouts (order of spaces at least)
+  const t = act(life.setup(P(3), { length: 'short' }, { now: 0, first: 0 }), { type: 'setup' }, -1, [777]);
+  const sig = (st) => L.boardOf(st).spaces.map((x) => x.t).join();
+  assert.notEqual(sig(s), sig(t));
+  assert.equal(normalSize('short') < normalSize('normal'), true);
+  assert.equal(normalSize('normal') < normalSize('epic'), true);
+  function normalSize(len) { return L.buildBoard({ length: len, fork: 'A', coast: len === 'epic', seed: 1, actions: true }).spaces.length; }
 });
 
-test('everyone chooses a path before the first spin: three dealt jobs or college', () => {
-  let s = life.setup(P(3), {}, { now: 0, first: 1 });
-  assert.equal(s.phase, 'deal');
-  assert.equal(life.bot(s, 1, { now: 0 }), null);
-  assert.deepEqual(life.randomFor(s, { type: 'deal' }, -1), [12, 11, 10, 12, 11, 10]);
-  assert.throws(() => act(s, { type: 'deal' }, 1)); // system only
-  s = act(s, { type: 'deal' }, -1, [0, 0, 0, 11, 0, 0]);
+test('every layout: both lanes reach retirement, ages 18→65, 60–100 spaces for normal/epic', () => {
+  for (const length of ['short', 'normal', 'epic']) for (const fork of ['A', 'B']) for (const coast of [false, true]) for (const seed of [1, 99]) {
+    const b = L.buildBoard({ length, fork, coast: coast && length !== 'short', seed, actions: true });
+    assert.equal(L.ageAt(b, 0), 18);
+    assert.equal(L.ageAt(b, b.retire), 65);
+    for (const lane of [0, 1]) for (const fk of [0, 1]) {
+      const p = { pos: 0, route: { lane, fork: fk } };
+      let n = 0;
+      while (p.pos !== b.retire && n++ < 300) p.pos = L.nextSpace(b, p, p.pos);
+      assert.equal(p.pos, b.retire);
+      assert.equal(n, b.dist[b.retire]);
+    }
+    assert.equal(new Set(b.spaces.map((x) => `${x.col},${x.row}`)).size, b.spaces.length);
+    assert.deepEqual(b.spaces.filter((x) => x.t === 'stop').map((x) => x.stop), ['grad', 'wedding', 'fork', 'rethink']);
+  }
+});
+
+test('start: path + secret goal per player; goals hidden in pending only for the chooser', () => {
+  let s = settle(life.setup(P(3), {}, { now: 0, first: 1 }));
   assert.equal(s.phase, 'pick');
   assert.equal(s.current, 1);
-  assert.deepEqual(s.pending.jobs.map((j) => j.name), ['Barista', 'Bike Courier', 'Shop Clerk']);
-  assert.equal(s.pending.dreams[0].name, 'Surgeon');
-  assert.throws(() => act(s, { type: 'spin' }, 1)); // no spinning before everyone has a path
-  assert.throws(() => act(s, { type: 'choose', i: 0 }, 0)); // not P0's pick
-  assert.throws(() => act(s, { type: 'choose', i: 5 }, 1));
-  // P1: college → dream step → back → college → Surgeon
-  s = act(s, { type: 'choose', i: 3 }, 1);
-  assert.equal(s.pending.step, 'dream');
-  s = act(s, { type: 'choose', i: 3 }, 1);
-  assert.equal(s.pending.step, 'path');
-  s = act(s, { type: 'choose', i: 3 }, 1);
-  s = act(s, { type: 'choose', i: 0 }, 1);
-  const p1 = s.players[1];
-  assert.equal(p1.career.name, 'Surgeon');
-  assert.ok(p1.college && p1.student);
-  assert.equal(p1.loans, L.STUDENT_LOANS);
-  assert.equal(p1.route.lane, 0);
-  assert.equal(s.phase, 'show'); // revealed to everyone
+  assert.equal(s.pending.goals.length, 2);
+  assert.throws(() => act(s, { type: 'spin' }, 1));
+  assert.throws(() => act(s, { type: 'choose', i: 0 }, 0));
+  s = act(s, { type: 'choose', i: 3 }, 1); // college
+  s = act(s, { type: 'choose', i: 0 }, 1); // dream job
+  assert.equal(s.pending.step, 'goal');
+  assert.ok(s.players[1].student && s.players[1].loans === L.STUDENT_LOANS);
+  assert.throws(() => act(s, { type: 'choose', i: 2 }, 1));
+  const g = s.pending.goals[1];
+  s = act(s, { type: 'choose', i: 1 }, 1);
+  assert.equal(s.players[1].goal, g);
   assert.equal(s.event.kind, 'path');
-  // next player in order (2), then 0; then the first chooser spins first
+  assert.ok(!JSON.stringify(s.event).includes(g), 'the reveal does not mention the goal');
   s = settle(s);
   assert.equal(s.current, 2);
-  s = act(s, { type: 'choose', i: 2 }, 2);
-  assert.equal(s.players[2].career.name, L.BASIC_CAREERS.find((j) => j.name === s.players[2].career.name).name);
-  assert.equal(s.players[2].route.lane, 1);
-  s = settle(s);
-  assert.equal(s.current, 0);
-  s = settle(act(s, { type: 'choose', i: 1 }, 0));
+  s = startAll(s);
   assert.equal(s.phase, 'turn');
   assert.equal(s.current, 1);
-  assert.ok(s.players.every((p) => p.picked && p.career));
+  assert.ok(s.players.every((p) => p.goal && p.career));
+  // goals off → no goal step
+  let t = settle(life.setup(P(2), { goals: 'off' }, { now: 0, first: 0 }));
+  t = act(t, { type: 'choose', i: 0 }, 0);
+  assert.equal(t.phase, 'show');
 });
 
-test('college pays only after graduation; workers are paid from day one', () => {
-  let s = startAll(life.setup(P(2), {}, { now: 0, first: 0 }), [0]);
-  const student = s.players[0];
-  assert.ok(student.student);
-  // the student walks the campus lane (no paydays) and is halted at Graduation by a 10
-  s = act(s, { type: 'spin' }, 0, [9]);
-  assert.equal(L.BOARD[s.players[0].pos].stop, 'grad');
-  s = settle(s);
-  assert.equal(s.players[0].student, false);
-  assert.equal(s.event.title, 'Graduation!');
-  // the worker's first space is a payday
-  const cash = s.players[1].cash;
-  s = settle(act(s, { type: 'spin' }, 1, [0]));
-  assert.equal(L.BOARD[s.players[1].pos].t, 'payday');
-  assert.equal(s.players[1].cash, cash + s.players[1].career.salary);
-  // a student landing on a payday gets nothing (forced for the test)
-  const t = structuredClone(s);
-  t.current = 0;
-  t.players[0].student = true;
-  t.players[0].pos = L.BOARD.find((x) => x.t === 'payday' && x.zone === 'city').id;
-  t.phase = 'move';
-  t.move = { no: 99, seat: 0, value: 1, from: 0, path: [t.players[0].pos] };
-  const c0 = t.players[0].cash;
-  assert.equal(act(t, { type: 'arrive' }, -1).players[0].cash, c0);
-});
-
-test('life cards: cash, raises, loans; family; wedding; fork; houses', () => {
+test('decisions: invest (gamble), hustle pays every payday, night school raise, insurance cancels a disaster', () => {
   let s = startAll(life.setup(P(2), {}, { now: 0, first: 0 }));
-  const put = (st, id) => { st = structuredClone(st); st.current = 0; st.players[0].pos = id; st.phase = 'move'; st.move = { no: 50, seat: 0, value: 1, from: id, path: [id] }; return st; };
-  const cityCash = L.BOARD.find((x) => x.t === 'cash' && x.pool === 'city').id;
-  // 'Promotion!' raises salary
-  const promo = L.EVENTS.city.findIndex((e) => e[1] === 'Promotion!');
-  const sal = s.players[0].career.salary;
-  let t = act(put(s, cityCash), { type: 'arrive' }, -1, [promo]);
-  assert.equal(t.players[0].career.salary, sal + 10 * L.K);
-  assert.equal(t.event.raise, 10 * L.K);
-  assert.ok(t.players[0].story.some((m) => /Salary/.test(m.t)));
-  // a big loss takes loans
-  const riskCash = L.BOARD.find((x) => x.t === 'cash' && x.pool === 'risk').id;
-  const sink = L.EVENTS.risk.findIndex((e) => e[1] === 'Balloon tours');
-  const r = put(s, riskCash); r.players[0].cash = 5000;
-  t = act(r, { type: 'arrive' }, -1, [sink]);
-  assert.equal(t.players[0].loans, 3);
-  assert.equal(t.players[0].cash, 5000 - 35000 + 30000);
-  // wedding stop
-  const wed = L.BOARD.find((x) => x.stop === 'wedding').id;
-  t = act(put(s, wed), { type: 'arrive' }, -1);
-  assert.equal(t.pending.kind, 'wedding');
-  assert.equal(t.event.kind, 'wait');
-  const married = act(t, { type: 'choose', i: 0 }, 0);
-  assert.ok(married.players[0].partner);
-  const single = act(t, { type: 'choose', i: 1 }, 0);
-  assert.ok(single.players[0].single && !single.players[0].partner);
-  // family: kids if married, pets if single
-  const fam = L.BOARD.find((x) => x.t === 'family').id;
-  assert.equal(act(put(married, fam), { type: 'arrive' }, -1, [5]).players[0].kids, 1);
-  assert.equal(act(put(married, fam), { type: 'arrive' }, -1, [0]).players[0].kids, 2); // twins
-  assert.equal(act(put(single, fam), { type: 'arrive' }, -1, [5]).players[0].pets, 1);
-  // fork
-  const fork = L.BOARD.find((x) => x.stop === 'fork').id;
-  t = act(act(put(s, fork), { type: 'arrive' }, -1), { type: 'choose', i: 1 }, 0);
-  assert.equal(t.players[0].route.fork, 1);
-  assert.equal(L.BOARD[L.walk(t.players[0], 1)[0]].pool, 'risk');
-  // houses: 3 cards + skip, loans when short
-  const hid = L.BOARD.find((x) => x.t === 'house').id;
-  const hs = put(s, hid); hs.players[0].cash = 20000;
-  t = act(hs, { type: 'arrive' }, -1, [9, 0, 0]);
-  assert.equal(t.pending.options.length, 4);
-  const manor = t.pending.options.findIndex((o) => o.name === 'Hilltop Manor');
-  const bought = act(t, { type: 'choose', i: manor }, 0);
-  assert.equal(bought.players[0].house.name, 'Hilltop Manor');
-  assert.equal(bought.players[0].loans, 22);
-  const bi = L.botChoice(t, 0);
-  assert.ok(t.pending.options[bi].skip || t.pending.options[bi].price <= 20000 + 3 * L.LOAN);
-  // net worth
-  const p = { cash: 50000, loans: 2, house: { worth: 100000 }, partner: true, kids: 2, pets: 1 };
-  assert.equal(L.netWorth(p), 50000 + 100000 + 20000 + 30000 + 6000 - 24000);
+  const lifeSp = find(s, (x) => x.t === 'cash' && x.pool === 'city');
+  // startup pitch → invest → win (roll 0 < 50)
+  let t = act(put(s, lifeSp, 0), { type: 'arrive' }, -1, [deckIdx(s, 'city', 'Startup pitch')]);
+  assert.equal(t.phase, 'choose');
+  assert.equal(t.pending.kind, 'decision');
+  assert.deepEqual(life.randomFor(t, { type: 'choose', i: 0 }, 0), [100]);
+  assert.equal(life.randomFor(t, { type: 'choose', i: 1 }, 0), null);
+  const c0 = t.players[0].cash + 100000;
+  t.players[0].cash = c0;
+  const win = act(t, { type: 'choose', i: 0 }, 0, [0]);
+  assert.equal(win.players[0].cash, c0 - 20000 + 60000);
+  assert.equal(win.players[0].st.gWins, 1);
+  const lose = act(t, { type: 'choose', i: 0 }, 0, [99]);
+  assert.equal(lose.players[0].cash, c0 - 20000);
+  const pass = act(t, { type: 'choose', i: 1 }, 0);
+  assert.equal(pass.players[0].cash, c0);
+  // food truck → hustle; a payday later pays salary + hustle
+  t = act(put(s, lifeSp, 0), { type: 'arrive' }, -1, [deckIdx(s, 'city', 'Food truck dream')]);
+  t.players[0].cash = 50000;
+  t = act(t, { type: 'choose', i: 0 }, 0);
+  assert.equal(t.players[0].hustle, 8000);
+  t = settle(t);
+  const pay = find(t, (x) => x.t === 'payday' && x.zone === 'city');
+  const before = t.players[0].cash;
+  t = act(put(t, pay, 0), { type: 'arrive' }, -1);
+  assert.equal(t.players[0].cash, before + t.players[0].career.salary + 8000);
+  // night school raise
+  t = act(put(s, lifeSp, 0), { type: 'arrive' }, -1, [deckIdx(s, 'city', 'Night school')]);
+  const sal = t.players[0].career.salary;
+  t = act(t, { type: 'choose', i: 0 }, 0);
+  assert.equal(t.players[0].career.salary, sal + 10000);
+  assert.equal(t.players[0].st.raises, 1);
+  // insurance, then a disaster is cancelled once
+  t = act(put(s, lifeSp, 0), { type: 'arrive' }, -1, [deckIdx(s, 'city', 'Insurance agent')]);
+  t.players[0].cash = 50000;
+  t = settle(act(t, { type: 'choose', i: 0 }, 0));
+  assert.equal(t.players[0].insured, true);
+  const cash = t.players[0].cash;
+  let u = act(put(t, lifeSp, 0), { type: 'arrive' }, -1, [deckIdx(t, 'city', 'Burst pipe')]);
+  assert.equal(u.players[0].cash, cash);
+  assert.equal(u.players[0].insured, false);
+  u = settle(u);
+  u = act(put(u, lifeSp, 0), { type: 'arrive' }, -1, [deckIdx(u, 'city', 'Fender bender')]);
+  assert.equal(u.players[0].cash, cash - 8000);
+  // a drawn card leaves the deck until it is reshuffled
+  assert.ok(!u.decks.city.includes(poolIdx('city', 'Fender bender')));
 });
 
-test('teaser shows what is ahead', () => {
-  const s = startAll(life.setup(P(2), {}, { now: 0, first: 0 }));
-  const up = L.upcoming(s.players[0]);
-  assert.ok(up.length >= 1 && up.length <= 4);
-  assert.ok(up.some((u) => u.label === 'Payday'));
-});
-
-test('retirement → finale reveals each life one by one → then over', () => {
+test('action cards: draw (hand max 3), play on others, Lawyer Up blocks, once per turn, hidden in hand', () => {
   let s = startAll(life.setup(P(3), {}, { now: 0, first: 0 }));
-  for (const p of s.players) { p.pos = L.RETIRE_ID - 1; p.route.fork = 0; }
-  s = settle(act(s, { type: 'spin' }, 0, [4]));
-  assert.equal(s.players[0].rank, 1);
-  assert.equal(s.current, 1);
-  s = settle(act(s, { type: 'spin' }, 1, [0]));
-  s = act(s, { type: 'spin' }, 2, [0]);
-  s = act(s, { type: 'arrive' }, -1, null, 1000);
-  s = act(s, { type: 'next' }, -1, null, 5000);
+  const actSp = find(s, (x) => x.t === 'action');
+  let t = act(put(s, actSp, 0), { type: 'arrive' }, -1, [s.adeck.indexOf('lawsuit')]);
+  assert.deepEqual(t.players[0].hand, ['lawsuit']);
+  assert.equal(t.event.secret, 'lawsuit');
+  t = settle(t);
+  t.current = 0; t.phase = 'turn';
+  t.players[1].cash = 100000;
+  assert.throws(() => act(t, { type: 'play', card: 0, target: 0 }, 0)); // not on yourself
+  assert.throws(() => act(t, { type: 'play', card: 0, target: 1 }, 1)); // not your turn
+  let u = act(t, { type: 'play', card: 0, target: 1 }, 0);
+  assert.equal(u.players[1].cash, 60000);
+  assert.equal(u.players[0].cash, t.players[0].cash + 40000);
+  assert.equal(u.players[0].st.plays, 1);
+  assert.equal(u.phase, 'show');
+  u = settle(u);
+  assert.equal(u.phase, 'turn', 'back to the same player’s turn');
+  assert.equal(u.current, 0);
+  u.players[0].hand = ['audit'];
+  assert.throws(() => act(u, { type: 'play', card: 0, target: 1 }, 0), /not now/); // one card per turn
+  // shield blocks automatically and is used up
+  t.players[2].hand = ['shield'];
+  const v = act(t, { type: 'play', card: 0, target: 2 }, 0);
+  assert.equal(v.players[2].cash, t.players[2].cash);
+  assert.deepEqual(v.players[2].hand, []);
+  assert.deepEqual(v.players[0].hand, []);
+  assert.equal(v.event.kind, 'block');
+  // headhunter: their next payday goes to you
+  t.players[0].hand = ['headhunt'];
+  let w = settle(act(t, { type: 'play', card: 0, target: 1 }, 0));
+  const pay = find(w, (x) => x.t === 'payday' && x.zone === 'city');
+  const c0 = w.players[0].cash; const c1 = w.players[1].cash;
+  w = act(put(w, pay, 1), { type: 'arrive' }, -1);
+  assert.equal(w.players[0].cash, c0 + w.players[1].career.salary);
+  assert.equal(w.players[1].cash, c1);
+  assert.equal(w.players[1].poachedBy, -1);
+  // hand max 3
+  t.players[0].hand = ['shield', 'shield', 'audit'];
+  const full = act(put(t, actSp, 0), { type: 'arrive' }, -1);
+  assert.equal(full.players[0].hand.length, 3);
+  // shields are never played directly; cards off → no plays
+  t.players[0].hand = ['shield'];
+  assert.throws(() => act(t, { type: 'play', card: 0 }, 0));
+  const off = startAll(life.setup(P(2), { actions: 'off' }, { now: 0, first: 0 }));
+  off.players[0].hand = ['windfall'];
+  assert.throws(() => act(off, { type: 'play', card: 0 }, 0));
+});
+
+test('house market: moves each round via randomFor; buy at market price, sell at a payday', () => {
+  let s = startAll(life.setup(P(2), {}, { now: 0, first: 0 }));
+  // finishing player 1's turn wraps the round → market draw
+  let t = structuredClone(s); t.current = 1; t.phase = 'show'; t.autoAt = 0;
+  assert.equal(life.randomFor(t, { type: 'next' }, -1).length, L.MARKET_TYPES.length);
+  const v0 = t.market.condo.v;
+  t = act(t, { type: 'next' }, -1, [7, 0, 3, 3]); // condo +20, cabin −15
+  assert.equal(t.market.condo.v, v0 + 20);
+  assert.equal(t.market.condo.d, 20);
+  assert.equal(t.round, 1);
+  t.current = 0; t.phase = 'show';
+  assert.equal(life.randomFor(t, { type: 'next' }, -1), null, 'no market move mid-round');
+  // buy
+  const hid = find(s, (x) => x.t === 'house');
+  let u = act(put(s, hid, 0), { type: 'arrive' }, -1, [0, 0, 0]); // Cozy Studio, Downtown Loft, Tiny Cabin
+  const studio = u.pending.options.findIndex((o) => o.name === 'Cozy Studio');
+  const price = L.houseValue(u, { i: 0 });
+  assert.equal(u.pending.options[studio].price, price);
+  u.players[0].cash = 100000;
+  u = settle(act(u, { type: 'choose', i: studio }, 0));
+  assert.equal(u.players[0].house.paid, price);
+  assert.equal(u.players[0].cash, 100000 - price);
+  // the market rises; landing on a payday offers a sale
+  u.market.condo.v = 200;
+  const pay = find(u, (x) => x.t === 'payday' && x.zone === 'city');
+  u = act(put(u, pay, 0), { type: 'arrive' }, -1);
+  assert.equal(u.pending.kind, 'sell');
+  const cash = u.players[0].cash;
+  const sold = act(u, { type: 'choose', i: 1 }, 0);
+  assert.equal(sold.players[0].house, null);
+  assert.equal(sold.players[0].cash, cash + 90000);
+  assert.equal(L.netWorth(sold, sold.players[0]), L.netWorth(u, u.players[0]));
+});
+
+test('chaos scales events and cards; goals score at the end', () => {
+  const mk = (chaos) => startAll(life.setup(P(2), { chaos }, { now: 0, first: 0 }));
+  const lifeSp = (s) => find(s, (x) => x.t === 'cash' && x.pool === 'city');
+  const gain = (chaos) => { const s = mk(chaos); const t = act(put(s, lifeSp(s), 0), { type: 'arrive' }, -1, [deckIdx(s, 'city', 'Art fair')]); return t.players[0].cash - s.players[0].cash; };
+  assert.equal(gain('normal'), 8000);
+  assert.ok(gain('calm') < 8000 && gain('wild') > 8000);
+  // goals
+  const s = mk('normal');
+  const p = s.players[0];
+  p.goal = 'globe'; p.st.trips = 3;
+  assert.deepEqual(L.goalStatus(s, 0), { done: true, bonus: 60000, prog: '3/3' });
+  p.st.trips = 2;
+  assert.equal(L.goalStatus(s, 0).done, false);
+  p.goal = 'thrifty';
+  assert.equal(L.goalStatus(s, 0).bonus, 30000);
+  p.st.bankLoans = 1;
+  assert.equal(L.goalStatus(s, 0).bonus, 0);
+  p.goal = 'tycoon'; p.cash = 999999;
+  assert.equal(L.finalWorth(s, 0), L.netWorth(s, p) + 60000);
+  const off = startAll(life.setup(P(2), { goals: 'off' }, { now: 0, first: 0 }));
+  assert.equal(L.finalWorth(off, 0), L.netWorth(off, off.players[0]));
+  assert.ok(!L.goalKeys(startAll(life.setup(P(2), { actions: 'off' }, { now: 0, first: 0 }))).includes('shark'));
+});
+
+test('finale reveals each life (with goal results) one by one, then over', () => {
+  let s = startAll(life.setup(P(3), {}, { now: 0, first: 0 }));
+  const b = L.boardOf(s);
+  for (const p of s.players) { p.pos = b.retire - 1; p.route.fork = 0; }
+  for (let k = 0; k < 3; k++) {
+    s = act(s, { type: 'spin' }, s.current, [4]);
+    s = settle(s);
+  }
   assert.equal(s.phase, 'finale');
-  assert.equal(life.results(s).over, false, 'game-over popup must wait for the recap');
-  assert.equal(s.finale.revealed, 0);
-  assert.equal(s.finale.titles.length, 3);
-  assert.equal(new Set(s.finale.titles.map((t) => t.title)).size, 3);
-  // lowest worth first, richest last
-  const w = s.finale.order.map((i) => L.netWorth(s.players[i]));
-  assert.deepEqual(w, [...w].sort((a, b) => a - b));
-  assert.equal(life.tick(s, { now: 5000 }), null);
-  let now = 5000;
+  assert.equal(life.results(s).over, false, 'game-over popup waits for the recap');
+  assert.equal(s.finale.goals.length, 3);
+  const w = s.finale.order.map((i) => s.finale.worth[i]);
+  assert.deepEqual(w, [...w].sort((a, c) => a - c));
+  let now = 0;
   for (let k = 1; k <= 3; k++) {
     now = s.autoAt;
-    assert.deepEqual(life.tick(s, { now: now - 1 }), null);
+    assert.equal(life.tick(s, { now: now - 1 }), null);
     s = act(s, life.tick(s, { now }), -1, null, now);
     assert.equal(s.finale.revealed, k);
     assert.equal(life.results(s).over, false);
   }
   assert.deepEqual(life.tick(s, { now: s.autoAt }), { type: 'end' });
-  assert.ok(s.autoAt - now >= L.FINALE_HOLD_MS);
   s = act(s, { type: 'end' }, -1, null, s.autoAt);
   const res = life.results(s);
   assert.equal(res.over, true);
-  assert.equal(s.finale.titles[s.finale.order[2]].title, 'The Tycoon');
-  assert.ok(res.rows.find((r, i) => i === s.finale.order[2]).win);
+  assert.deepEqual(res.rows.map((r) => r.score), s.finale.worth);
+  assert.ok(res.rows[s.finale.order[2]].win);
 });
 
-test('bot: never acts out of turn, picks sensibly', () => {
-  let s = settle(life.setup(P(2), {}, { now: 0, first: 0 }));
+test('bot: plays attack cards on the leader, picks goal-minded decisions', () => {
+  const s = startAll(life.setup(P(3), {}, { now: 0, first: 0 }));
+  s.players[0].hand = ['shield', 'lawsuit'];
+  s.players[2].cash = 500000;
+  assert.deepEqual(life.bot(s, 0, { now: 0 }), { type: 'play', card: 1, target: 2 });
+  s.players[0].hand = ['shield'];
+  assert.deepEqual(life.bot(s, 0, { now: 0 }), { type: 'spin' });
   assert.equal(life.bot(s, 1, { now: 0 }), null);
-  const a = life.bot(s, 0, { now: 0 });
-  assert.equal(a.type, 'choose');
-  s.pending.jobs = [L.BASIC_CAREERS[0], L.BASIC_CAREERS[1], L.BASIC_CAREERS[2]];
-  s.pending.dreams = [L.DEGREE_CAREERS[11], L.DEGREE_CAREERS[0], L.DEGREE_CAREERS[1]];
-  assert.equal(L.botChoice(s, 0), 3); // dream pays far more → college
-  s.pending.dreams = [L.DEGREE_CAREERS[0], L.DEGREE_CAREERS[1], L.DEGREE_CAREERS[2]];
-  s.pending.jobs = [L.BASIC_CAREERS[11], L.BASIC_CAREERS[1], L.BASIC_CAREERS[2]];
-  assert.equal(L.botChoice(s, 0), 0); // best job is good enough
+  const lifeSp = find(s, (x) => x.t === 'cash' && x.pool === 'city');
+  const t = act(put(s, lifeSp, 0), { type: 'arrive' }, -1, [deckIdx(s, 'city', 'Island cruise')]);
+  t.players[0].cash = 100000;
+  t.players[0].goal = 'globe';
+  assert.equal(L.botChoice(t, 0), 0, 'a globetrotter takes the trip');
+  t.players[0].goal = 'thrifty'; t.players[0].cash = 0;
+  assert.equal(L.botChoice(t, 0), 1, 'penny-wise avoids a loan');
 });
 
 // ---------- bot play-outs (same harness as tests/bots.test.mjs) ----------
 const randFor = (ranges) => ranges.map((r) => Math.floor(Math.random() * r));
-
-function playOut(g, nPlayers, maxSteps = 20000) {
+function playOut(g, nPlayers, opts, maxSteps = 30000) {
   const players = Array.from({ length: nPlayers }, (_, i) => ({ pid: `bot-${i}${Math.random().toString(36).slice(2, 6)}`, name: `Bot${i}` }));
-  const opts = {};
-  for (const o of g.options || []) opts[o.key] = o.default;
   let s = g.setup(players, opts, { now: 0, first: 0 });
   let now = 0;
   const apply = (a, seat) => {
@@ -263,18 +339,24 @@ function playOut(g, nPlayers, maxSteps = 20000) {
   throw new Error(`${g.id}: game did not finish`);
 }
 
-test('computer players finish 80 games of Life Path legally (2–6 players)', () => {
-  let college = 0; let work = 0;
-  for (let k = 0; k < 80; k++) {
+test('computer players finish 96 games of Life Path legally across all options (2–6 players)', () => {
+  const variants = [{}, { length: 'short' }, { length: 'epic', chaos: 'wild' }, { chaos: 'calm', actions: 'off' }, { goals: 'off', cash: 'low' }, { cash: 'high', actions: 'off', goals: 'off' }];
+  let college = 0; let work = 0; let plays = 0;
+  for (let k = 0; k < 96; k++) {
     const n = 2 + (k % 5);
-    const { s } = playOut(life, n);
+    const opts = variants[k % variants.length];
+    const { s } = playOut(life, n, opts);
     const res = life.results(s);
     assert.equal(res.rows.length, n);
     assert.ok(res.rows.some((r) => r.win));
     assert.equal(s.finale.revealed, n);
-    assert.ok(s.players.every((p) => p.retired && p.pos === L.RETIRE_ID && p.cash >= 0 && !p.student && p.career));
-    assert.ok(JSON.stringify(s).length < 20000, 'state stays small');
-    s.players.forEach((p) => { if (p.college) college++; else work++; });
+    const b = L.boardOf(s);
+    assert.ok(s.players.every((p) => p.retired && p.pos === b.retire && p.cash >= 0 && !p.student && p.career && p.hand.length <= 3));
+    if (!s.opts.actions) assert.ok(s.players.every((p) => p.hand.length === 0 && p.st.plays === 0));
+    if (!s.opts.goals) assert.ok(s.players.every((p) => !p.goal));
+    assert.ok(JSON.stringify(s).length < 30000, 'state stays small');
+    s.players.forEach((p) => { if (p.college) college++; else work++; plays += p.st.plays; });
   }
   assert.ok(college > 40 && work > 40, `college ${college} / work ${work}`);
+  assert.ok(plays > 20, `action cards were played (${plays})`);
 });

@@ -660,7 +660,7 @@ function createView(root, api) {
         active: i === state.current && !over && state.phase !== 'deal',
         me: i === me,
         away: !api.isAlive(p.pid),
-        sub: `🃏${H.sum(p.hand)} 📜${p.dev.length}${p.knights ? ` 🛡️${p.knights}` : ''} ${badges}`,
+        sub: `🃏${H.sum(p.hand)}${p.dev.length ? ` 📜${p.dev.length}` : ''}${p.knights ? ` ⚔️${p.knights}` : ''} ${badges}`,
       };
     }));
     [...sb.children].forEach((c, i) => c.style.setProperty('--pc', PC[i]));
