@@ -97,7 +97,7 @@
 /* floating numbers */
 .rumble .rumble-pops { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 3; }
 .rumble .rumble-pop {
-  position: absolute; left: 50%; top: 28%;
+  position: absolute; left: 50%; top: calc(14% + var(--k, 0) * 19px);
   transform: translate(-50%, 0);
   font-weight: 900; font-size: 1.05rem; white-space: nowrap;
   text-shadow: 0 2px 0 rgba(0,0,0,.55), 0 0 6px rgba(0,0,0,.5);
@@ -183,10 +183,9 @@
   color: #fff;
   display: grid; gap: 8px;
 }
-.rumble .rumble-shophead { display: flex; align-items: center; gap: 8px; height: 34px; }
+.rumble .rumble-shophead { display: flex; align-items: center; gap: 8px; height: 36px; }
 .rumble .rumble-shoptitle { font-weight: 900; font-size: .95rem; letter-spacing: .3px; }
-.rumble .rumble-myen { flex: 1; font-size: .85rem; font-weight: 700; color: #bfe9ff; white-space: nowrap; }
-.rumble .rumble-sweep { min-height: 34px; background: rgba(255,255,255,.14); color: #fff; }
+.rumble .rumble-sweep { flex: none; min-height: 36px; background: rgba(255,255,255,.14); color: #fff; }
 .rumble .rumble-market { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
 .rumble .rumble-pc {
   font: inherit; text-align: left; color: var(--ink);
@@ -213,11 +212,13 @@
 .rumble .rumble-pckind { font-size: .56rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #2f8c78; }
 .rumble .rumble-now .rumble-pckind { color: #c46a1c; }
 .rumble .rumble-mine {
-  font: inherit; font-size: .8rem; font-weight: 700; color: #fff;
-  min-height: 36px; padding: 6px 10px; border-radius: 10px; border: 1px dashed rgba(255,255,255,.3);
+  flex: 1; min-width: 0;
+  font: inherit; font-size: .82rem; font-weight: 800; color: #bfe9ff;
+  min-height: 36px; padding: 4px 8px; border-radius: 10px; border: 1px dashed rgba(255,255,255,.3);
   background: rgba(0,0,0,.18); text-align: left; cursor: pointer;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.rumble .rumble-mine.rumble-invis { visibility: hidden; }
 
 /* ---------- monster sheet ---------- */
 .rumble .rumble-sheetbg { position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; }
@@ -267,7 +268,9 @@
   .rumble .btn.big { padding: 12px 6px; }
   .rumble .rumble-shop { padding: 6px 8px 8px; gap: 6px; }
   .rumble .rumble-market { gap: 6px; }
-  .rumble .rumble-pc { height: 128px; padding: 5px 6px; }
+  .rumble .rumble-pc { height: 110px; padding: 5px 6px; gap: 2px; }
+  .rumble .rumble-pcicon { font-size: 1.25rem; }
+  .rumble .rumble-shoptitle { font-size: .85rem; }
   .rumble .rumble-pcname { font-size: .72rem; }
   .rumble .rumble-pctext { font-size: .64rem; }
 }

@@ -137,9 +137,8 @@ export default {
         <div class="turn-banner"></div>
       </section>
       <section class="rumble-shop">
-        <div class="rumble-shophead"><span class="rumble-shoptitle">Power shop</span><span class="rumble-myen"></span><button class="btn small rumble-sweep">↻ Sweep 2⚡</button></div>
+        <div class="rumble-shophead"><span class="rumble-shoptitle">Power shop</span><button class="rumble-mine" aria-label="Your energy and traits"></button><button class="btn small rumble-sweep">↻ Sweep 2⚡</button></div>
         <div class="rumble-market"></div>
-        <button class="rumble-mine"></button>
       </section>
       <div class="rumble-sheetbg hidden"><div class="rumble-sheet"></div></div>
     </div>`);
@@ -272,13 +271,13 @@ export default {
           ? cardHTML(id, slot, { sel: picked === slot, cost: p ? R.costFor(p, id) : undefined, cant: shopping && p && R.costFor(p, id) > p.energy })
           : `<div class="rumble-pc rumble-none">${state.needDeal ? 'Shuffling…' : 'Sold out'}</div>`)).join('');
       }
-      q('.rumble-myen').textContent = p ? `You: ⚡${p.energy}` : '';
       const sw = q('.rumble-sweep');
       sw.disabled = !shopping || !p || p.energy < R.SWEEP_COST || !state.pool.length;
       const mine = q('.rumble-mine');
-      const mineTxt = p ? (p.cards.length ? `Your traits: ${p.cards.map((id) => R.CARDS[id].icon).join(' ')}  ›` : 'Your traits: none yet') : '';
+      const icons = p ? p.cards.map((id) => R.CARDS[id].icon) : [];
+      const mineTxt = p ? `You ⚡${p.energy}${icons.length ? ` · ${icons.length > 3 ? `${icons.slice(0, 2).join('')}+${icons.length - 2}` : icons.join('')}` : ''} ›` : '';
       if (mine.textContent !== mineTxt) mine.textContent = mineTxt;
-      mine.classList.toggle('hidden', !p);
+      mine.classList.toggle('rumble-invis', !p);
     }
 
     market.addEventListener('click', (e) => {

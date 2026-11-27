@@ -93,18 +93,18 @@ export const BASIC_CAREERS = [
   job('Plumber', '🔧', 58, 'Hero of every 3 a.m. emergency.'),
 ];
 export const DEGREE_CAREERS = [
-  job('Teacher', '📚', 55, 'Shapes young minds, grades until midnight.'),
-  job('Journalist', '📰', 57, 'Chases the story, finds the coffee.'),
-  job('Nurse', '💉', 60, 'Calm in every storm.'),
-  job('Marine Biologist', '🐬', 61, 'Talks to dolphins. Professionally.'),
-  job('Architect', '📐', 65, 'Draws buildings that actually stand up.'),
-  job('Game Designer', '🎮', 67, 'Gets paid to play. Sort of.'),
-  job('Engineer', '⚙️', 70, 'If it’s broken, you’ll fix it.'),
-  job('Veterinarian', '🐾', 73, 'Every patient is a good boy.'),
-  job('Software Dev', '💻', 75, 'Turns coffee into code.'),
-  job('Pilot', '✈️', 79, 'An office with the best view.'),
-  job('Pharmacist', '💊', 82, 'Reads every doctor’s handwriting.'),
-  job('Surgeon', '🩺', 87, 'Steady hands, very long shifts.'),
+  job('Teacher', '📚', 45, 'Shapes young minds, grades until midnight.'),
+  job('Journalist', '📰', 47, 'Chases the story, finds the coffee.'),
+  job('Nurse', '💉', 50, 'Calm in every storm.'),
+  job('Marine Biologist', '🐬', 51, 'Talks to dolphins. Professionally.'),
+  job('Architect', '📐', 55, 'Draws buildings that actually stand up.'),
+  job('Game Designer', '🎮', 57, 'Gets paid to play. Sort of.'),
+  job('Engineer', '⚙️', 60, 'If it’s broken, you’ll fix it.'),
+  job('Veterinarian', '🐾', 63, 'Every patient is a good boy.'),
+  job('Software Dev', '💻', 65, 'Turns coffee into code.'),
+  job('Pilot', '✈️', 69, 'An office with the best view.'),
+  job('Pharmacist', '💊', 72, 'Reads every doctor’s handwriting.'),
+  job('Surgeon', '🩺', 77, 'Steady hands, very long shifts.'),
 ];
 
 // house market: four kinds of home, each with its own price index (100 = list price)
@@ -242,12 +242,12 @@ export const POOLS = {
 
 // ---------- action cards ----------
 export const ACTIONS = {
-  lawsuit: { icon: '⚖️', name: 'Lawsuit', attack: true, n: 4, text: (s) => `Sue a player for ${fmt(sc(s, 20))}.` },
+  lawsuit: { icon: '⚖️', name: 'Lawsuit', attack: true, n: 4, text: (s) => `Sue a player for ${fmt(sc(s, 40))}.` },
   headhunt: { icon: '🕴️', name: 'Headhunter', attack: true, n: 3, text: () => 'Their next payday goes to you.' },
-  timeshare: { icon: '🏝️', name: 'Timeshare Pitch', attack: true, n: 3, text: (s) => `They must buy a useless timeshare: ${fmt(sc(s, 18))}.` },
-  audit: { icon: '🧾', name: 'Surprise Audit', attack: true, n: 3, text: (s) => `They pay ${Math.round(15 * CHAOS[s.opts.chaos])}% of their cash in back taxes.` },
+  timeshare: { icon: '🏝️', name: 'Timeshare Pitch', attack: true, n: 3, text: (s) => `They must buy a useless timeshare: ${fmt(sc(s, 30))}.` },
+  audit: { icon: '🧾', name: 'Surprise Audit', attack: true, n: 3, text: (s) => `They pay ${Math.round(20 * CHAOS[s.opts.chaos])}% of their cash in back taxes.` },
   shield: { icon: '🛡️', name: 'Lawyer Up', n: 4, text: () => 'Keep it: blocks the next card played on you.' },
-  windfall: { icon: '🍀', name: 'Lucky Break', n: 3, text: (s) => `Collect ${fmt(sc(s, 15))} right now.` },
+  windfall: { icon: '🍀', name: 'Lucky Break', n: 3, text: (s) => `Collect ${fmt(sc(s, 25))} right now.` },
   boost: { icon: '🏎️', name: 'Fast Lane', n: 2, text: () => 'Your next spin moves 3 extra spaces.' },
 };
 export const ACTION_DECK = Object.entries(ACTIONS).flatMap(([k, a]) => Array(a.n).fill(k));
@@ -261,10 +261,10 @@ export const GOALS = {
   globe: { icon: '✈️', name: 'Globetrotter', text: 'Take 3+ trips.', bonus: '+$20k per trip' },
   scholar: { icon: '🎓', name: 'Scholar', text: 'Go to college and earn a raise (or more).', bonus: '+$60k' },
   risk: { icon: '🎲', name: 'Risk Taker', text: 'Win at least one gamble.', bonus: '+$35k per win' },
-  hustler: { icon: '🧰', name: 'Hustler', text: 'Run 2+ side hustles.', bonus: '+$30k each' },
-  thrifty: { icon: '🐷', name: 'Penny-Wise', text: 'Never take a bank loan (student loans don’t count).', bonus: '+$40k' },
+  hustler: { icon: '🧰', name: 'Hustler', text: 'Start a side hustle (or several).', bonus: '+$30k each' },
+  thrifty: { icon: '🐷', name: 'Penny-Wise', text: 'Never take a bank loan (student loans don’t count).', bonus: '+$30k' },
   shark: { icon: '🦈', name: 'Card Shark', text: 'Land 2+ action cards on other players.', bonus: '+$25k each' },
-  star: { icon: '🌟', name: 'Career Star', text: 'Retire with a salary of $100k+.', bonus: '+$60k' },
+  star: { icon: '🌟', name: 'Career Star', text: 'Retire with a salary of $85k+.', bonus: '+$60k' },
   early: { icon: '🐦', name: 'Early Bird', text: 'Be the first to retire.', bonus: '+$50k' },
 };
 export const goalKeys = (s) => Object.keys(GOALS).filter((k) => k !== 'shark' || s.opts.actions);
@@ -285,10 +285,10 @@ export function goalStatus(s, i) {
     case 'globe': return n(st.trips, 3, 20);
     case 'scholar': return p.college ? n(st.raises, 1, 0, 60) : { done: false, bonus: 0, prog: 'no degree' };
     case 'risk': return n(st.gWins, 1, 35);
-    case 'hustler': return n(st.hustles, 2, 30);
-    case 'thrifty': return { done: st.bankLoans === 0, bonus: st.bankLoans === 0 ? 40 * K : 0, prog: st.bankLoans ? 'took a loan' : 'no loans yet' };
+    case 'hustler': return n(st.hustles, 1, 30);
+    case 'thrifty': return { done: st.bankLoans === 0, bonus: st.bankLoans === 0 ? 30 * K : 0, prog: st.bankLoans ? 'took a loan' : 'no loans yet' };
     case 'shark': return n(st.plays, 2, 25);
-    case 'star': { const sal = p.career?.salary || 0; return { done: sal >= 100 * K, bonus: sal >= 100 * K ? 60 * K : 0, prog: fmt(sal) }; }
+    case 'star': { const sal = p.career?.salary || 0; return { done: sal >= 85 * K, bonus: sal >= 85 * K ? 60 * K : 0, prog: fmt(sal) }; }
     case 'early': return { done: p.rank === 1, bonus: p.rank === 1 ? 50 * K : 0, prog: p.rank ? (p.rank === 1 ? 'first!' : 'too late') : 'not yet' };
     default: return null;
   }
@@ -952,15 +952,15 @@ function play(s, seat, a, now) {
     }
     p.st.plays++;
     let amt = 0; let text = '';
-    if (key === 'lawsuit') { amt = sc(s, 20); addCash(t, -amt); addCash(p, amt); text = `${p.name} sues ${t.name} over a dented mailbox and wins ${fmt(amt)}!`; }
+    if (key === 'lawsuit') { amt = sc(s, 40); addCash(t, -amt); addCash(p, amt); text = `${p.name} sues ${t.name} over a dented mailbox and wins ${fmt(amt)}!`; }
     if (key === 'headhunt') { t.poachedBy = seat; text = `${p.name} hires a headhunter: ${t.name}’s next paycheck goes to ${p.name}!`; }
-    if (key === 'timeshare') { amt = sc(s, 18); addCash(t, -amt); text = `${p.name} sends a pushy salesman: ${t.name} buys a timeshare at Lake Mosquito for ${fmt(amt)}.`; addStory(s, t, '🏝️', 'Got talked into a timeshare'); amt = 0; }
-    if (key === 'audit') { const pct = Math.round(15 * CHAOS[s.opts.chaos]); const tax = Math.round((Math.max(0, t.cash) * pct) / 100 / K) * K; addCash(t, -tax); text = `${p.name} tips off the tax office: ${t.name} pays ${fmt(tax)} in back taxes.`; }
+    if (key === 'timeshare') { amt = sc(s, 30); addCash(t, -amt); text = `${p.name} sends a pushy salesman: ${t.name} buys a timeshare at Lake Mosquito for ${fmt(amt)}.`; addStory(s, t, '🏝️', 'Got talked into a timeshare'); amt = 0; }
+    if (key === 'audit') { const pct = Math.round(20 * CHAOS[s.opts.chaos]); const tax = Math.round((Math.max(0, t.cash) * pct) / 100 / K) * K; addCash(t, -tax); text = `${p.name} tips off the tax office: ${t.name} pays ${fmt(tax)} in back taxes.`; }
     setEvent(s, seat, 'action', A.icon, A.name, text, amt, { target: a.target, card: key });
     addLog(s, `${A.icon} ${p.name} plays ${A.name} on ${t.name}.`);
     return show(s, now);
   }
-  if (key === 'windfall') { const amt = sc(s, 15); addCash(p, amt); setEvent(s, seat, 'action', A.icon, A.name, `${p.name} finds a winning lottery ticket in an old jacket!`, amt, { card: key }); }
+  if (key === 'windfall') { const amt = sc(s, 25); addCash(p, amt); setEvent(s, seat, 'action', A.icon, A.name, `${p.name} finds a winning lottery ticket in an old jacket!`, amt, { card: key }); }
   if (key === 'boost') { p.boost = 3; setEvent(s, seat, 'action', A.icon, A.name, `${p.name} takes the fast lane: +3 spaces on the next spin!`, 0, { card: key }); }
   addLog(s, `${A.icon} ${p.name} plays ${A.name}.`);
   return show(s, now, CHOICE_SHOW_MS);
@@ -1212,7 +1212,7 @@ export function botChoice(s, seat) {
     const bestDream = Math.max(...pd.dreams.map((o) => o.salary));
     const list = pd.step === 'path' ? pd.jobs : pd.dreams;
     const wantsSchool = pd.goals.includes('scholar') || pd.goals.includes('star');
-    if (pd.step === 'path' && bestDream - bestJob >= (wantsSchool ? 22 : 32) * K) return 3;
+    if (pd.step === 'path' && bestDream - bestJob >= (wantsSchool ? 14 : 22) * K) return 3;
     return list.findIndex((o) => o.salary === (pd.step === 'path' ? bestJob : bestDream));
   }
   if (pd.kind === 'wedding') return p.goal === 'globe' ? 1 : 0;
