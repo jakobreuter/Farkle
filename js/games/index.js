@@ -13,6 +13,7 @@ import draft from './draft.js';
 import spy from './spy.js';
 import court from './court.js';
 import gems from './gems.js';
+import rumble from './rumble.js';
 
-export const GAME_LIST = [farkle, yacht, draw, streak, rush, faces, snap, liars, four, ludo, life, draft, spy, court, gems];
+export const GAME_LIST = [farkle, yacht, draw, streak, rush, faces, snap, liars, four, ludo, life, draft, spy, court, gems, rumble];
 export const GAMES = Object.fromEntries(GAME_LIST.map((g) => [g.id, g]));
