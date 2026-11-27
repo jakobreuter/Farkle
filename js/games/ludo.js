@@ -98,11 +98,12 @@ export default {
       <section class="scoreboard ludo-scores"></section>
       <section class="table ludo-table">
         <div class="turn-info"><div class="turn-label"><i class="ludo-dot"></i><span></span></div><div class="turn-points">Rolled <strong>–</strong></div></div>
-        <div class="ludo-board"><div class="ludo-pieces"></div><div class="ludo-pick hidden"><button class="ludo-pbtn" data-d="back" aria-label="Back one square">◀ −1</button><button class="ludo-pbtn ludo-fwd" data-d="fwd" aria-label="Forward one square">+1 ▶</button></div></div>
+        <div class="ludo-board"><div class="ludo-pieces"></div></div>
         <div class="sel-line"></div>
         <div class="ludo-dock">
           <div class="ludo-diebox"></div>
           <button class="btn primary big" data-a="roll">Roll</button>
+          <div class="ludo-pick hidden"><button class="btn big ludo-pbtn" data-d="back">◀ Back 1</button><button class="btn primary big ludo-pbtn" data-d="fwd">Fwd 1 ▶</button></div>
         </div>
         <div class="hint"></div>
         <div class="banner hidden"></div>
@@ -117,7 +118,7 @@ export default {
 
     const die = createDie(0, () => tryRoll());
     q('.ludo-diebox').appendChild(die.el);
-    q('.ludo-dock .btn').addEventListener('click', () => tryRoll());
+    q('.ludo-dock [data-a="roll"]').addEventListener('click', () => tryRoll());
 
     let state = null;
     let rollingUntil = 0;
@@ -166,23 +167,17 @@ export default {
       if (!(back ? state.backs : state.legal).includes(picking)) return;
       sendMove(picking, back);
     });
-    // tapping anywhere else on the board closes the chooser
-    board.addEventListener('click', (e) => {
+    // tapping anywhere else closes the chooser
+    el.addEventListener('click', (e) => {
       if (picking != null && !e.target.closest('.ludo-pick, .ludo-pc.can')) { picking = null; render(); }
     });
 
     function renderPick() {
       const pk = q('.ludo-pick');
       const ok = picking != null && myTurn() && state.phase === 'move' && !busy() && !moveRequested && (state.backs || []).includes(picking);
-      if (!ok) { picking = null; pk.classList.add('hidden'); return; }
-      const pl = state.players[state.current];
-      const [r, c] = L.cellOf(pl.color, pl.tokens[picking]);
-      const x = Math.max(2.2, Math.min(12.8, c + 0.5));
-      const below = r < 2.5;
-      pk.style.setProperty('--x', x);
-      pk.style.setProperty('--y', below ? r + 1.75 : r - 0.75);
-      pk.classList.toggle('below', below);
-      pk.classList.remove('hidden');
+      q('.ludo-dock [data-a="roll"]').classList.toggle('hidden', ok);
+      pk.classList.toggle('hidden', !ok);
+      if (!ok) { picking = null; return; }
       layer.querySelectorAll('.ludo-pc.picked').forEach((e) => e.classList.remove('picked'));
       pieces.get(`${state.current}:${picking}`)?.classList.add('picked');
     }
@@ -290,7 +285,7 @@ export default {
       }
       sl.textContent = sel;
 
-      const btn = q('.ludo-dock .btn');
+      const btn = q('.ludo-dock [data-a="roll"]');
       const canRoll = myTurn() && state.phase === 'roll' && !busy() && !rollRequested;
       btn.disabled = !canRoll;
       btn.textContent = state.phase === 'roll' && myTurn() && state.bonus ? 'Roll again' : 'Roll';

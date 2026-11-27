@@ -184,25 +184,95 @@ test('bot priorities: capture > come out > safety/home > furthest unexposed', ()
   let s = withTokens(base, 1, [40, -1, -1, -1]); // yellow on loop 14
   s = withTokens(s, 0, [8, -1, -1, -1]);
   s = roll(s, 6);
-  assert.equal(L.botMove(s), 0);
+  assert.equal(L.botMove(s).token, 0);
   // come out on a 6
   s = withTokens(withTokens(base, 1, [-1, -1, -1, -1]), 0, [20, -1, -1, -1]);
   s = roll(s, 6);
-  assert.equal(L.botMove(s), 1);
+  assert.equal(L.botMove(s).token, 1);
   // move into the home column / home
   s = withTokens(base, 0, [48, 30, -1, -1]);
   s = roll(s, 4);
-  assert.equal(L.botMove(s), 0);
+  assert.equal(L.botMove(s).token, 0);
   s = withTokens(base, 0, [53, 30, -1, -1]);
   s = roll(s, 3);
-  assert.equal(L.botMove(s), 0);
+  assert.equal(L.botMove(s).token, 0);
   // furthest token that won't be exposed: token 1 (30→32) would sit 2 ahead of an opponent
   s = withTokens(base, 1, [4, -1, -1, -1]); // yellow loop 30
   s = withTokens(s, 0, [10, 30, -1, -1]); // red loop 10 & 30
   s = roll(s, 2); // 30 → 32 = loop 32 (yellow at 30 threatens); 10 → 12 safe-ish
-  assert.equal(L.botMove(s), 0);
+  assert.equal(L.botMove(s).token, 0);
   s = roll(withTokens(withTokens(base, 1, [-1, -1, -1, -1]), 0, [10, 30, -1, -1]), 2);
-  assert.equal(L.botMove(s), 1, 'no threats: furthest');
+  assert.equal(L.botMove(s).token, 1, 'no threats: furthest');
+});
+
+test('back step: on a 1, loop tokens may step back (not from start square, base or home column)', () => {
+  let s = withTokens(L.newGame(P(2)), 0, [0, 7, 52, -1]); // start square, loop, home column, base
+  s = roll(s, 1);
+  assert.deepEqual(s.legal, [0, 1, 2]);
+  assert.deepEqual(s.backs, [1], 'only the loop token off the start square');
+  assert.equal(s.auto, null, 'a choice exists');
+  assert.throws(() => L.applyAction(s, { type: 'move', token: 0, back: true }), /step back/);
+  assert.throws(() => L.applyAction(s, { type: 'move', token: 2, back: true }), /step back/);
+  assert.throws(() => L.applyAction(s, { type: 'move', token: 3, back: true }), /step back/);
+  const b = L.applyAction(s, { type: 'move', token: 1, back: true });
+  assert.equal(b.players[0].tokens[1], 6);
+  assert.equal(b.current, 1, 'counts as the move; no bonus');
+  assert.equal(b.lastMove.back, true);
+  const f = move(s, 1);
+  assert.equal(f.players[0].tokens[1], 8);
+  // progress 1 may step back onto its own start square
+  s = roll(withTokens(L.newGame(P(2)), 0, [1, -1, -1, -1]), 1);
+  assert.deepEqual(s.backs, [0]);
+  assert.equal(L.applyAction(s, { type: 'move', token: 0, back: true }).players[0].tokens[0], 0);
+  // only for a 1
+  s = roll(withTokens(L.newGame(P(2)), 0, [7, -1, -1, -1]), 2);
+  assert.deepEqual(s.backs, []);
+  assert.throws(() => L.applyAction(s, { type: 'move', token: 0, back: true }));
+  // single token, single square but two directions → no auto move
+  s = roll(withTokens(L.newGame(P(2)), 0, [7, 7, -1, -1]), 1);
+  assert.equal(s.auto, null);
+});
+
+test('back step can capture (bonus roll) but not on a safe square', () => {
+  // yellow on loop 11 (progress 37); red at progress 12 steps back to 11
+  let s = withTokens(withTokens(L.newGame(P(2)), 1, [37, -1, -1, -1]), 0, [12, -1, -1, -1]);
+  s = roll(s, 1);
+  s = ludo.apply(s, { type: 'move', token: 0, back: true }, 0, { now: 0 });
+  assert.equal(s.players[1].tokens[0], -1);
+  assert.equal(s.event, 'capture');
+  assert.equal(s.current, 0);
+  assert.equal(s.bonus, 'capture');
+  // yellow on the star (loop 8): stepping back onto it captures nothing
+  s = withTokens(withTokens(L.newGame(P(2)), 1, [34, -1, -1, -1]), 0, [9, -1, -1, -1]);
+  s = L.applyAction(roll(s, 1), { type: 'move', token: 0, back: true });
+  assert.equal(s.players[1].tokens[0], 34);
+  assert.equal(s.current, 1);
+});
+
+test('back step off: a 1 only moves forward, forced moves are automatic again', () => {
+  const g = ludo.setup(P(2), { back: 'off' }, { now: 0, first: 0 });
+  assert.equal(g.backStep, false);
+  let s = roll(withTokens(g, 0, [7, -1, -1, -1]), 1);
+  assert.deepEqual(s.backs, []);
+  assert.equal(s.auto, 0);
+  assert.throws(() => ludo.apply(s, { type: 'move', token: 0, back: true }, 0, { now: 0 }));
+  assert.equal(ludo.setup(P(2), {}, { now: 0, first: 0 }).backStep, true, 'on by default');
+});
+
+test('bot uses the back step to capture and to escape danger', () => {
+  // capture behind it
+  let s = withTokens(withTokens(L.newGame(P(2)), 1, [37, -1, -1, -1]), 0, [12, -1, -1, -1]);
+  s = roll(s, 1);
+  assert.deepEqual(L.botMove(s), { token: 0, back: true });
+  assert.deepEqual(ludo.bot(s, 0, { now: 0 }), { type: 'move', token: 0, back: true });
+  // red at progress 22 (loop 22), yellow at loop 20 (progress 46) two behind: forward to 23 is still in reach,
+  // back to 21 (a star) is safe
+  s = withTokens(withTokens(L.newGame(P(2)), 1, [46, -1, -1, -1]), 0, [22, -1, -1, -1]);
+  s = roll(s, 1);
+  assert.deepEqual(L.botMove(s), { token: 0, back: true });
+  // no danger → plain forward move
+  s = roll(withTokens(L.newGame(P(2)), 0, [22, -1, -1, -1]), 1);
+  assert.deepEqual(L.botMove(s), { token: 0, back: false });
 });
 
 // ---------- full games between computer players ----------
@@ -236,13 +306,14 @@ function playOut(g, nPlayers, opts = {}, maxSteps = 20000) {
   throw new Error(`${g.id}: game did not finish`);
 }
 
-test('computer players finish 120 games of Ludo legally (2–4 players, both modes)', () => {
+test('computer players finish 120 games of Ludo legally (2–4 players, all option combos)', () => {
   let steps = 0;
   let maxStep = 0;
   for (let k = 0; k < 120; k++) {
     const n = 2 + (k % 3);
     const until = k % 2 ? 'all' : 'first';
-    const { s, step } = playOut(ludo, n, { until });
+    const back = k % 4 < 2 ? 'one' : 'off';
+    const { s, step } = playOut(ludo, n, { until, back });
     steps += step;
     maxStep = Math.max(maxStep, step);
     const r = ludo.results(s);
@@ -265,8 +336,8 @@ test('bot beats a random mover most of the time', () => {
       if (s.phase === 'roll') s = roll(s, 1 + Math.floor(Math.random() * 6));
       else if (s.phase === 'pass') s = L.applyAction(s, { type: 'pass' });
       else {
-        const t = s.current === 0 ? L.botMove(s) : s.legal[Math.floor(Math.random() * s.legal.length)];
-        s = move(s, t);
+        const m = s.current === 0 ? L.botMove(s) : { token: s.legal[Math.floor(Math.random() * s.legal.length)], back: false };
+        s = L.applyAction(s, { type: 'move', token: m.token, back: m.back });
       }
     }
     assert.equal(s.phase, 'over');
