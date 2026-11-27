@@ -171,8 +171,11 @@ function renderPlay() {
     const showIt = () => {
       if (sess()?.game?.no !== g.no) return;
       const wins = res.rows.filter((r) => r.win);
-      const myWin = res.rows.some((r, i) => r.win && g.state.players[i]?.pid === me);
-      $('#go-title').textContent = wins.length > 1 ? 'It’s a tie! 🤝' : myWin ? '🏆 You win!' : `🏆 ${wins[0]?.name} wins!`;
+      // team games can name the winners directly (res.winPids) and give their own title (res.title)
+      const myWin = res.winPids ? res.winPids.includes(me) : res.rows.some((r, i) => r.win && g.state.players[i]?.pid === me);
+      $('#go-title').textContent = myWin ? '🏆 You win!'
+        : res.title ? res.title
+          : wins.length > 1 ? 'It’s a tie! 🤝' : `🏆 ${wins[0]?.name} wins!`;
       $('#go-scores').innerHTML = res.rows.slice().sort((a, b) => b.score - a.score)
         .map((r) => `<div class="${r.win ? 'w' : ''}">${esc(r.name)}: ${r.score.toLocaleString()}</div>`).join('');
       const host = session.isHost();

@@ -66,14 +66,15 @@ export default {
         score: S.total(s, S.TEAM_KEY[t]) - S.teamLeft(s, t),
         win: over && s.winner === t,
       }));
-      return { over, rows, title: s.winner != null ? `${S.TEAM_NAMES[s.winner]} team wins!` : '' };
+      const winPids = s.winner != null ? s.players.filter((p) => p.team === s.winner).map((p) => p.pid) : [];
+      return { over, rows, winPids, title: s.winner != null ? `🏆 ${S.TEAM_NAMES[s.winner]} team wins!` : '' };
     }
     const found = S.total(s, 'r') - S.left(s, 'r');
-    if (s.winner === 0) return { over, rows: [{ name: 'Your team', score: found, win: over }], title: 'You found them all!' };
+    if (s.winner === 0) return { over, rows: [{ name: 'Your team', score: found, win: over }], winPids: s.players.map((p) => p.pid), title: 'You found them all!' };
     // a loss: everyone loses to the clock (or the trap)
     const rows = s.players.map((p) => ({ name: p.name, score: found, win: false }));
     if (over) rows.push({ name: s.reason === 'trap' ? 'The trap' : 'The clock', score: 0, win: true });
-    return { over, rows, title: s.reason === 'trap' ? 'Caught by the trap!' : 'Out of turns!' };
+    return { over, rows, winPids: [], title: s.reason === 'trap' ? '💥 Caught by the trap!' : '⏰ Out of turns!' };
   },
 
   rulesHTML,

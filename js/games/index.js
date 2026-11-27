@@ -10,6 +10,7 @@ import four from './four.js';
 import ludo from './ludo.js';
 import life from './life.js';
 import draft from './draft.js';
+import spy from './spy.js';
 
-export const GAME_LIST = [farkle, yacht, draw, streak, rush, faces, snap, liars, four, ludo, life, draft];
+export const GAME_LIST = [farkle, yacht, draw, streak, rush, faces, snap, liars, four, ludo, life, draft, spy];
 export const GAMES = Object.fromEntries(GAME_LIST.map((g) => [g.id, g]));
