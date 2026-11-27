@@ -362,6 +362,8 @@
   .life .lp-dock { height: 108px; }
   .life .lp-wheel { width: 100px; height: 100px; }
   .life .lp-dock { gap: 12px; }
+  .life .lp-mk-t { display: none; }
+  .life .lp-market { gap: 4px; }
   .life .lp-teaser { font-size: .8rem; }
   .life .lp-jc { height: 172px; }
   .life.lp-ended .lp-viewport { height: clamp(320px, calc(100dvh - 330px), 480px); }

@@ -588,7 +588,7 @@ export default {
       market.innerHTML = `<span class="lp-mk-t">🏠 Market</span>${L.MARKET_TYPES.map((t) => {
         const m = state.market[t.key];
         const cls = m.d > 0 ? 'up' : m.d < 0 ? 'down' : '';
-        return `<span class="lp-mk ${cls} ${fresh && m.d ? 'flash' : ''}">${t.icon}<b>${m.v}</b>${m.d > 0 ? `▲${m.d}` : m.d < 0 ? `▼${-m.d}` : ''}</span>`;
+        return `<span class="lp-mk ${cls} ${fresh && m.d ? 'flash' : ''}">${t.icon}<b>${m.v}</b>${m.d > 0 ? '▲' : m.d < 0 ? '▼' : ''}</span>`;
       }).join('')}`;
     }
     function renderBar() {

@@ -16,6 +16,7 @@ import gems from './gems.js';
 import rumble from './rumble.js';
 import close from './close.js';
 import hex from './hex.js';
+import rows from './rows.js';
 
-export const GAME_LIST = [farkle, yacht, draw, streak, rush, faces, snap, liars, four, ludo, life, draft, spy, court, gems, rumble, close, hex];
+export const GAME_LIST = [farkle, yacht, draw, streak, rush, faces, snap, liars, four, ludo, life, draft, spy, court, gems, rumble, close, hex, rows];
 export const GAMES = Object.fromEntries(GAME_LIST.map((g) => [g.id, g]));

@@ -1,6 +1,6 @@
 # 🎲 Game Night
 
-Play games in the browser with friends: 11 games including Farkle, Yacht, Draw, Property Rush, Ludo and Life Path. No sign-up, works on phones.
+Play games in the browser with friends: 19 games including Farkle, Property Rush, Life Path, Hexlands and Symbol Snap. No sign-up, works on phones.
 
 **Play:** https://jakobreuter.github.io/Farkle/
 
@@ -28,8 +28,17 @@ Play alone or fill a seat: the host can tap **🤖 Add computer player** in the 
 - **Symbol Snap**: real-time matching: every two cards share exactly one symbol; tap it first to win the card.
 - **Liar's Dice**: bluff about the dice under everyone's cups; call "Liar!" and lose dice until one player is left.
 - **Four in a Row**: drop discs, connect four; single game or best of 3/5.
-- **Ludo**: the classic race-home board game for 2–4 players.
-- **Life Path**: an original spin-and-move journey game: college or work, careers, family, houses, retirement.
+- **Ludo**: the classic race-home board game for 2–4 players, with an optional move-back-1 on a roll of 1.
+- **Life Path**: an original spin-and-move life game: choose a job or college, secret life goals, decisions on most spaces,
+  action cards to play on each other, a changing house market, and settings for length, starting cash and chaos.
+- **Snack Draft**: pick a card, pass the rest; a random menu of snacks each game.
+- **Spy Words**: two teams, one-word clues, a 5×5 word grid (co-op with 2–3 players).
+- **Court Intrigue**: hidden roles, bluffs, challenges and blocks.
+- **Gem Traders**: collect gems, buy cards that make future cards cheaper, win patrons.
+- **Monster Rumble**: dice battles for the Peak, power cards bought with energy.
+- **Close Call**: guess the number, then bet on whose guess is closest (242 questions).
+- **Hexlands**: settle a random hex island, gather resources, trade and build.
+- **Color Rows**: everyone marks their color rows from the same dice roll.
 
 ## Fair randomness
 - Every die, card and word pick is exactly uniform. There is no weighting, no streak or "catch-up" logic, and every player is handled the same way.
