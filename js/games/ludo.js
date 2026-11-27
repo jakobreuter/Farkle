@@ -13,6 +13,7 @@ const rulesHTML = () => `
     <li>After rolling, the tokens that can move <b>glow</b> — tap one. If only one move is possible it’s made for you; if none, the turn passes.</li>
     <li>A <b>6</b> earns another roll — but <b>three 6s in a row</b> loses the turn.</li>
     <li>Land on an opponent to send it back to its base and earn a <b>bonus roll</b>. Tokens on a start square or a <b>★ star</b> are safe.</li>
+    <li><b>Back step</b> (lobby option, on by default): on a roll of <b>1</b> you may move a token on the track <b>back one square</b> instead of forward — tap it, then pick ◀ or ▶. Not from your own start square, base or home column. A back step can capture too.</li>
     <li>You need the <b>exact</b> roll to reach home. First to bring all four home wins (or play on for every place).</li>
   </ol>`;
 
@@ -29,10 +30,11 @@ export default {
   maxPlayers: 4,
   options: [
     { key: 'until', label: 'Play until', default: 'first', choices: [['first', 'First player finishes'], ['all', 'All places decided']] },
+    { key: 'back', label: 'Back step', default: 'one', choices: [['one', 'On a roll of 1'], ['off', 'Off']] },
   ],
 
   setup(players, opts, { first }) {
-    return L.newGame(players, { until: opts?.until, first: first % players.length });
+    return L.newGame(players, { until: opts?.until, backStep: opts?.back !== 'off', first: first % players.length });
   },
 
   randomFor(s, a, seat) {
@@ -52,7 +54,7 @@ export default {
       if (!rand) throw new Error('no dice');
       return L.applyAction(s, a, [rand[0] + 1], now);
     }
-    if (a.type === 'move') return L.applyAction(s, { type: 'move', token: a.token }, null, now);
+    if (a.type === 'move') return L.applyAction(s, { type: 'move', token: a.token, back: !!a.back }, null, now);
     throw new Error('unknown action');
   },
 
@@ -68,8 +70,9 @@ export default {
     if (s.current !== seat) return null;
     if (s.phase === 'roll') return { type: 'roll' };
     if (s.phase === 'move' && s.auto == null) {
-      const t = L.botMove(s);
-      return t == null ? null : { type: 'move', token: t };
+      const m = L.botMove(s);
+      if (!m) return null;
+      return m.back ? { type: 'move', token: m.token, back: true } : { type: 'move', token: m.token };
     }
     return null; // forced moves and passes happen on their own (tick)
   },
@@ -95,7 +98,7 @@ export default {
       <section class="scoreboard ludo-scores"></section>
       <section class="table ludo-table">
         <div class="turn-info"><div class="turn-label"><i class="ludo-dot"></i><span></span></div><div class="turn-points">Rolled <strong>–</strong></div></div>
-        <div class="ludo-board"><div class="ludo-pieces"></div></div>
+        <div class="ludo-board"><div class="ludo-pieces"></div><div class="ludo-pick hidden"><button class="ludo-pbtn" data-d="back" aria-label="Back one square">◀ −1</button><button class="ludo-pbtn ludo-fwd" data-d="fwd" aria-label="Forward one square">+1 ▶</button></div></div>
         <div class="sel-line"></div>
         <div class="ludo-dock">
           <div class="ludo-diebox"></div>
@@ -122,6 +125,7 @@ export default {
     let moveRequested = 0;
     let uiTimer = null;
     let anim = null; // { timers, over: Map(key -> progress) }
+    let picking = null; // token waiting for ◀ / ▶
     const pieces = new Map(); // "seat:token" -> element
 
     const mySeat = () => api.mySeat();
@@ -142,12 +146,46 @@ export default {
       const pc = e.target.closest('.ludo-pc.can');
       if (!pc || !myTurn() || state.phase !== 'move' || busy() || moveRequested) return;
       const t = Number(pc.dataset.t);
-      if (!state.legal.includes(t)) return;
+      if (!state.legal.includes(t) && !(state.backs || []).includes(t)) return;
+      if ((state.backs || []).includes(t)) { picking = picking === t ? null : t; render(); return; }
+      sendMove(t, false);
+    });
+
+    function sendMove(t, back) {
+      picking = null;
       moveRequested = Date.now();
-      api.act({ type: 'move', token: t });
+      api.act(back ? { type: 'move', token: t, back: true } : { type: 'move', token: t });
       render();
       setTimeout(() => { if (moveRequested && Date.now() - moveRequested > 7900) { moveRequested = 0; render(); } }, 8000);
+    }
+
+    q('.ludo-pick').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b || picking == null || !myTurn() || state.phase !== 'move' || busy() || moveRequested) return;
+      const back = b.dataset.d === 'back';
+      if (!(back ? state.backs : state.legal).includes(picking)) return;
+      sendMove(picking, back);
     });
+    // tapping anywhere else on the board closes the chooser
+    board.addEventListener('click', (e) => {
+      if (picking != null && !e.target.closest('.ludo-pick, .ludo-pc.can')) { picking = null; render(); }
+    });
+
+    function renderPick() {
+      const pk = q('.ludo-pick');
+      const ok = picking != null && myTurn() && state.phase === 'move' && !busy() && !moveRequested && (state.backs || []).includes(picking);
+      if (!ok) { picking = null; pk.classList.add('hidden'); return; }
+      const pl = state.players[state.current];
+      const [r, c] = L.cellOf(pl.color, pl.tokens[picking]);
+      const x = Math.max(2.2, Math.min(12.8, c + 0.5));
+      const below = r < 2.5;
+      pk.style.setProperty('--x', x);
+      pk.style.setProperty('--y', below ? r + 1.75 : r - 0.75);
+      pk.classList.toggle('below', below);
+      pk.classList.remove('hidden');
+      layer.querySelectorAll('.ludo-pc.picked').forEach((e) => e.classList.remove('picked'));
+      pieces.get(`${state.current}:${picking}`)?.classList.add('picked');
+    }
 
     function pieceEl(seat, t, color) {
       const k = `${seat}:${t}`;
@@ -168,7 +206,7 @@ export default {
 
     function renderPieces() {
       const showGlow = myTurn() && state.phase === 'move' && !busy() && !moveRequested;
-      const legal = new Set(state.phase === 'move' && !busy() ? state.legal : []);
+      const legal = new Set(state.phase === 'move' && !busy() ? [...state.legal, ...(state.backs || [])] : []);
       // group tokens that share a spot
       const groups = new Map();
       state.players.forEach((pl, seat) => {
@@ -242,7 +280,10 @@ export default {
           sel = state.event === 'three6' || state.sixes >= 3 ? 'Three 6s in a row — turn lost' : 'No moves — turn passes';
           sl.classList.add('bad');
         } else if (state.phase === 'move') {
-          sel = state.auto != null ? 'Only one move — moving…' : `${new Set(state.legal.map((t) => cur.tokens[t])).size} possible moves`;
+          const nb = new Set((state.backs || []).map((t) => cur.tokens[t])).size;
+          sel = state.auto != null ? 'Only one move — moving…'
+            : nb ? 'Rolled 1 — step forward or back'
+              : `${new Set(state.legal.map((t) => cur.tokens[t])).size} possible moves`;
         } else if (state.phase === 'roll' && state.bonus) {
           sel = state.bonus === 'capture' ? 'Capture! Bonus roll' : 'Rolled a 6 — roll again!';
         }
@@ -262,10 +303,15 @@ export default {
       else if (!myTurn()) hint = !api.isAlive(cur.pid) ? `Waiting for ${cur.name} to come back…` : `Waiting for ${cur.name}…`;
       else if (rolling() || anim) hint = '';
       else if (state.phase === 'roll') hint = cur.tokens.every((t) => t < 0) ? 'Tap the die — you need a 6 to come out.' : 'Tap the die to roll.';
-      else if (state.phase === 'move') hint = state.auto != null ? '' : 'Tap a glowing token to move it.';
+      else if (state.phase === 'move') {
+        hint = state.auto != null ? '' : picking != null ? 'Choose ◀ back or ▶ forward.'
+          : (state.backs || []).length ? 'Tap a glowing token, then ◀ back or ▶ forward.' : 'Tap a glowing token to move it.';
+      }
       q('.hint').textContent = hint;
 
       renderPieces();
+      layer.querySelectorAll('.ludo-pc.picked').forEach((e) => e.classList.remove('picked'));
+      renderPick();
     }
 
     function stopAnim() {
@@ -280,7 +326,7 @@ export default {
       stopAnim();
       const m = next.lastMove;
       const k = `${m.seat}:${m.token}`;
-      const steps = m.from < 0 ? [0] : Array.from({ length: m.to - m.from }, (_, i) => m.from + 1 + i);
+      const steps = m.from < 0 || m.back ? [m.to] : Array.from({ length: m.to - m.from }, (_, i) => m.from + 1 + i);
       anim = { timers: [], over: new Map([[k, m.from]]) };
       for (const c of m.captured) anim.over.set(`${c.seat}:${c.token}`, c.from);
       const a = anim;
@@ -315,6 +361,7 @@ export default {
         state = next;
         if (!old || next.rollNo !== old.rollNo) { rollRequested = 0; die.shake(false); }
         if (!old || next.moveNo !== old.moveNo) moveRequested = 0;
+        if (!old || next.rollNo !== old.rollNo || next.moveNo !== old.moveNo || next.current !== old.current) picking = null;
         let delay = 0;
         if (old && next.rollNo === old.rollNo + 1 && next.die) {
           stopAnim();

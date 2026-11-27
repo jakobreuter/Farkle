@@ -170,3 +170,29 @@
   .ludo .ludo-diebox { --size: 44px; width: 54px; height: 54px; }
   .ludo .ludo-dock .btn.big { flex: 0 1 170px; min-width: 0; }
 }
+
+/* back-step chooser (◀ −1 / +1 ▶) above the tapped token */
+.ludo .ludo-pick {
+  position: absolute; z-index: 8;
+  left: calc(var(--x) * 100% / 15);
+  top: calc(var(--y) * 100% / 15);
+  transform: translate(-50%, -100%);
+  display: flex; gap: 6px; padding: 4px;
+  background: rgba(10, 30, 20, .92);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.45);
+  animation: ludoPickIn .18s cubic-bezier(.2,1.4,.4,1);
+}
+.ludo .ludo-pick.below { transform: translate(-50%, 0); }
+.ludo .ludo-pbtn {
+  min-width: 52px; height: 38px; padding: 0 8px;
+  border: 0; border-radius: 9px;
+  font: 800 .95rem/1 system-ui, sans-serif;
+  background: #fffaf0; color: var(--ink); cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0,0,0,.35);
+}
+.ludo .ludo-pbtn.ludo-fwd { background: var(--accent); color: var(--accent-ink); }
+.ludo .ludo-pbtn:active { transform: translateY(1px); }
+.ludo .ludo-pc.picked { z-index: 6; box-shadow: 0 0 0 3px #fff, 0 0 14px 4px var(--accent); animation: none; transform: translate(-50%, -50%) scale(calc(var(--k, 1) * 1.15)); }
+@keyframes ludoPickIn { from { opacity: 0; scale: .7; } to { opacity: 1; scale: 1; } }

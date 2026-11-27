@@ -19,6 +19,8 @@
 //   • exact roll needed to reach home
 //   • no legal move → the turn passes after a short pause
 //   • exactly one distinct move → it's made automatically after a short pause
+//   • optional "back step": on a roll of 1, a token on the loop (not on its own
+//     start square) may instead move BACK one square — it can capture too
 
 export const COLORS = ['red', 'green', 'yellow', 'blue'];
 export const COLOR_NAMES = { red: 'Red', green: 'Green', yellow: 'Yellow', blue: 'Blue' };
@@ -82,7 +84,7 @@ export function colorsFor(n) {
   return [0, 1, 2, 3].slice(0, n);
 }
 
-export function newGame(players, { until = 'first', first = 0 } = {}) {
+export function newGame(players, { until = 'first', first = 0, backStep = true } = {}) {
   const cols = colorsFor(players.length);
   return {
     players: players.map((p, i) => ({ pid: p.pid, name: p.name, color: cols[i], tokens: [-1, -1, -1, -1], place: null })),
@@ -92,9 +94,11 @@ export function newGame(players, { until = 'first', first = 0 } = {}) {
     rollNo: 0,
     moveNo: 0,
     sixes: 0,
-    legal: [],
+    legal: [], // tokens that can move forward
+    backs: [], // tokens that may step back 1 instead (back-step rule, roll of 1)
     auto: null,
     autoAt: 0,
+    backStep: !!backStep,
     until: until === 'all' ? 'all' : 'first',
     finished: [],
     lastMove: null,
@@ -122,6 +126,12 @@ export function destOf(s, seat, t, die = s.die) {
 export function legalTokens(s, seat = s.current, die = s.die) {
   if (die == null) return [];
   return [0, 1, 2, 3].filter((t) => destOf(s, seat, t, die) != null);
+}
+
+/** Tokens that may step back one square: back-step on, a roll of 1, on the loop but not on the start square. */
+export function backTokens(s, seat = s.current, die = s.die) {
+  if (!s.backStep || die !== 1) return [];
+  return [0, 1, 2, 3].filter((t) => { const p = s.players[seat].tokens[t]; return p >= 1 && p <= LAST_LOOP; });
 }
 
 /** Opponent tokens [{seat, token}] that would be sent home by a token of `seat` landing on progress d. */
@@ -154,6 +164,7 @@ function endTurn(s) {
   s.phase = 'roll';
   s.sixes = 0;
   s.legal = [];
+  s.backs = [];
   s.auto = null;
   s.bonus = null;
 }
@@ -161,6 +172,7 @@ function endTurn(s) {
 function finishGame(s) {
   s.phase = 'over';
   s.legal = [];
+  s.backs = [];
   s.auto = null;
   s.winners = s.players.map((p, i) => (p.place === 1 ? i : -1)).filter((i) => i >= 0);
   addLog(s, `Game over — ${s.players[s.winners[0]].name} wins!`);
@@ -192,7 +204,8 @@ export function applyAction(state, a, values, now = 0) {
         return s;
       }
       const legal = legalTokens(s);
-      if (!legal.length) {
+      const backs = backTokens(s);
+      if (!legal.length && !backs.length) {
         s.phase = 'pass';
         s.event = 'nomove';
         s.legal = [];
@@ -203,24 +216,27 @@ export function applyAction(state, a, values, now = 0) {
       }
       s.phase = 'move';
       s.legal = legal;
+      s.backs = backs;
       // tokens on the same square are interchangeable: one distinct move → do it for them
       const spots = new Set(legal.map((t) => p.tokens[t]));
-      s.auto = spots.size === 1 ? legal[0] : null;
+      s.auto = spots.size === 1 && !backs.length ? legal[0] : null;
       s.autoAt = now + AUTO_MS;
       return s;
     }
     case 'move': {
       if (s.phase !== 'move') throw new Error('roll first');
       const t = Number(a.token);
-      if (!s.legal.includes(t)) throw new Error('that token can’t move');
+      const back = !!a.back;
+      if (!(back ? s.backs : s.legal).includes(t)) throw new Error(back ? 'that token can’t step back' : 'that token can’t move');
       const from = p.tokens[t];
-      const to = destOf(s, s.current, t);
+      const to = back ? from - 1 : destOf(s, s.current, t);
       const caps = capturesAt(s, s.current, to);
       p.tokens[t] = to;
       for (const c of caps) s.players[c.seat].tokens[c.token] = -1;
       s.moveNo++;
-      s.lastMove = { seat: s.current, token: t, from, to, captured: caps.map((c) => ({ ...c, from: state.players[c.seat].tokens[c.token] })) };
+      s.lastMove = { seat: s.current, token: t, from, to, back, captured: caps.map((c) => ({ ...c, from: state.players[c.seat].tokens[c.token] })) };
       s.legal = [];
+      s.backs = [];
       s.auto = null;
       if (caps.length) {
         s.event = 'capture';
@@ -231,6 +247,9 @@ export function applyAction(state, a, values, now = 0) {
         addLog(s, `${p.name} brought a token home (${homeCount(p)}/4).`);
       } else if (from < 0) {
         s.event = 'out';
+      } else if (back) {
+        s.event = 'back';
+        addLog(s, `${p.name} stepped back one square.`);
       }
       if (homeCount(p) === 4) {
         s.finished.push(s.current);
@@ -286,37 +305,44 @@ export function threatened(s, seat, li) {
 }
 
 /**
- * Priority: capture > bring a token out on a 6 > move into safety/home
+ * Priority: capture (forward or back step) > bring a token out on a 6 > finish
+ * > pull a threatened token out of danger (forward, else back step) > move into safety
  * > advance the furthest token that won't be exposed (else the furthest).
+ * Returns { token, back } or null.
  */
 export function botMove(s) {
   const seat = s.current;
   const pl = s.players[seat];
-  const opts = s.legal.map((t) => {
+  const mk = (t, back) => {
     const from = pl.tokens[t];
-    const to = destOf(s, seat, t);
+    const to = back ? from - 1 : destOf(s, seat, t);
     const caps = capturesAt(s, seat, to);
     const li = to <= LAST_LOOP ? loopIndex(pl.color, to) : -1;
     const safeDest = to > LAST_LOOP || SAFE.has(li);
     const fromExposed = from >= 0 && from <= LAST_LOOP && threatened(s, seat, loopIndex(pl.color, from));
-    return { t, from, to, caps, safeDest, exposed: !safeDest && threatened(s, seat, li), fromExposed };
-  });
-  if (!opts.length) return null;
-  const capt = opts.filter((o) => o.caps.length);
+    return { t, back, from, to, caps, safeDest, exposed: !safeDest && threatened(s, seat, li), fromExposed };
+  };
+  const fwd = s.legal.map((t) => mk(t, false));
+  const bck = (s.backs || []).map((t) => mk(t, true));
+  const pick = (o) => ({ token: o.t, back: o.back });
+  const best = (list, score) => list.reduce((b, o) => (score(o) > score(b) ? o : b));
+  if (!fwd.length && !bck.length) return null;
+  const capt = [...fwd, ...bck].filter((o) => o.caps.length);
   if (capt.length) {
     // knock back whoever had come furthest
-    const worth = (o) => Math.max(...o.caps.map((c) => s.players[c.seat].tokens[c.token]));
-    return capt.reduce((b, o) => (worth(o) > worth(b) ? o : b)).t;
+    return pick(best(capt, (o) => Math.max(...o.caps.map((c) => s.players[c.seat].tokens[c.token])) + (o.back ? 0 : 0.5)));
   }
-  const out = opts.find((o) => o.from < 0);
-  if (out) return out.t;
-  const safe = opts.filter((o) => o.safeDest && (o.from <= LAST_LOOP || o.to === HOME));
-  if (safe.length) {
-    // prefer finishing, then rescuing a token that's under threat, then the furthest
-    const score = (o) => (o.to === HOME ? 1000 : 0) + (o.fromExposed ? 100 : 0) + o.from;
-    return safe.reduce((b, o) => (score(o) > score(b) ? o : b)).t;
-  }
-  const calm = opts.filter((o) => !o.exposed);
-  const pool = calm.length ? calm : opts;
-  return pool.reduce((b, o) => (o.from > b.from ? o : b)).t;
+  const out = fwd.find((o) => o.from < 0);
+  if (out) return pick(out);
+  const home = fwd.find((o) => o.to === HOME);
+  if (home) return pick(home);
+  const rescue = fwd.filter((o) => o.fromExposed && !o.exposed);
+  if (rescue.length) return pick(best(rescue, (o) => o.from));
+  const rescueBack = bck.filter((o) => o.fromExposed && !o.exposed);
+  if (rescueBack.length) return pick(best(rescueBack, (o) => o.from));
+  if (!fwd.length) return pick(best(bck, (o) => (o.exposed ? 0 : 100) + o.from));
+  const safe = fwd.filter((o) => o.safeDest && o.from <= LAST_LOOP);
+  if (safe.length) return pick(best(safe, (o) => o.from));
+  const calm = fwd.filter((o) => !o.exposed);
+  return pick(best(calm.length ? calm : fwd, (o) => o.from));
 }
